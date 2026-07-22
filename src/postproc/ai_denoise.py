@@ -73,21 +73,30 @@ class OnnxDenoiser:
         return np.transpose(y, (1, 2, 0)) if y.ndim == 3 else y   # -> (H,W,C) ou (H,W)
 
     def run(self, img01):
-        """img01: (H,W,3) se in_ch==3, senão (H,W). Retorna mesmo shape, ladrilhado."""
+        """img01: (H,W,3) se in_ch==3, senão (H,W). Ladrilha em blocos de tamanho FIXO (self.tile),
+        com PADDING nas bordas → uma única shape de entrada → TensorRT compila 1 engine (cacheada).
+        Sem isso, cada ladrilho de borda vira uma shape nova e o TRT recompila (lento)."""
         a = np.asarray(img01, np.float32)
         h, w = a.shape[:2]
+        T = self.tile
         out = np.zeros_like(a)
         wsum = np.zeros((h, w), np.float32)
-        step = max(1, self.tile - self.overlap)
+        step = max(1, T - self.overlap)
         for y0 in range(0, h, step):
             for x0 in range(0, w, step):
-                y1, x1 = min(y0 + self.tile, h), min(x0 + self.tile, w)
-                y0c, x0c = max(0, y1 - self.tile), max(0, x1 - self.tile)
-                res = self._tile(a[y0c:y1, x0c:x1])
-                if out.ndim == 3 and res.ndim == 2:
+                y1, x1 = min(y0 + T, h), min(x0 + T, w)
+                th, tw = y1 - y0, x1 - x0
+                tile = a[y0:y1, x0:x1]
+                if (th, tw) != (T, T):                       # padeia p/ TxT (shape fixa)
+                    shp = (T, T, a.shape[2]) if a.ndim == 3 else (T, T)
+                    pad = np.zeros(shp, np.float32)
+                    pad[:th, :tw] = tile
+                    tile = pad
+                res = self._tile(tile)
+                if a.ndim == 3 and res.ndim == 2:
                     res = np.repeat(res[..., None], 3, 2)
-                out[y0c:y1, x0c:x1] += res
-                wsum[y0c:y1, x0c:x1] += 1.0
+                out[y0:y1, x0:x1] += res[:th, :tw]           # corta de volta ao tamanho real
+                wsum[y0:y1, x0:x1] += 1.0
                 if x1 >= w:
                     break
             if y1 >= h:
