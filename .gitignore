@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Saídas do pipeline
+output/
+
+# Dados grandes / stacks (regeneráveis: scripts/process_real_dataset.py + fetch_real_data.py)
+data/stacks/
+*.zip
+*.fit
+# exceção: a fixture pequena de teste (~1 MB) fica versionada
+!tests/data/real_starfield_m67.fits
+
+# Build C++
+cpp/build/
+cpp/compile_commands.json      # gerado (caminhos absolutos); recriar com cmake
+
+# Claude Code (pessoal / gerado — commitados: commands/, agents/, hooks/)
+.claude/settings.local.json
+.claude/.last-test
+
+# SO / editor
+.DS_Store
+Thumbs.db

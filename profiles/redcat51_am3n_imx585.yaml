@@ -1,0 +1,7 @@
+# Perfil de equipamento — o nosso rig recomendado (docs/01).
+name: RedCat51 + AM3N + IMX585
+camera: ZWO ASI585MC
+sensor_px_um: 2.9
+mount: ZWO AM3N
+focal_mm: 250.0
+aperture_mm: 51.0

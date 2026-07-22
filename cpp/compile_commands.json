@@ -1,0 +1,14 @@
+[
+{
+  "directory": "F:/1.Projects/17.jetson_telescope/cpp/build",
+  "command": "C:\\ProgramData\\mingw64\\mingw64\\bin\\g++.exe -IF:/1.Projects/17.jetson_telescope/cpp/include -IF:/1.Projects/17.jetson_telescope/cpp/build/_deps/doctest-src -std=gnu++17 -o CMakeFiles\\tele_tests.dir\\tests\\test_control_math.cpp.obj -c F:\\1.Projects\\17.jetson_telescope\\cpp\\tests\\test_control_math.cpp",
+  "file": "F:/1.Projects/17.jetson_telescope/cpp/tests/test_control_math.cpp",
+  "output": "F:/1.Projects/17.jetson_telescope/cpp/build/CMakeFiles/tele_tests.dir/tests/test_control_math.cpp.obj"
+},
+{
+  "directory": "F:/1.Projects/17.jetson_telescope/cpp/build",
+  "command": "C:\\ProgramData\\mingw64\\mingw64\\bin\\g++.exe -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN -IF:/1.Projects/17.jetson_telescope/cpp/build/_deps/doctest-src -std=gnu++11 -o _deps\\doctest-build\\CMakeFiles\\doctest_with_main.dir\\doctest\\parts\\doctest.cpp.obj -c F:\\1.Projects\\17.jetson_telescope\\cpp\\build\\_deps\\doctest-src\\doctest\\parts\\doctest.cpp",
+  "file": "F:/1.Projects/17.jetson_telescope/cpp/build/_deps/doctest-src/doctest/parts/doctest.cpp",
+  "output": "F:/1.Projects/17.jetson_telescope/cpp/build/_deps/doctest-build/CMakeFiles/doctest_with_main.dir/doctest/parts/doctest.cpp.obj"
+}
+]

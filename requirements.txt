@@ -1,0 +1,41 @@
+# ============================================================================
+# PC de desenvolvimento (Windows/Linux, CPU) — roda a Fase 1 com o simulador
+# ============================================================================
+numpy>=1.23
+opencv-python>=4.8
+scipy>=1.10             # autofoco (curve_fit), deconvolução (fftconvolve), cupyx fallback
+astropy>=5.3           # FITS/WCS, tempo/coordenadas (visibilidade do catálogo)
+scikit-image>=0.20     # deconvolução/restauração; puxado também pelo astroalign
+pyongc>=0.6            # catálogo do céu (OpenNGC) — src/core/catalog.py
+
+# Reuso (opcional, recomendado) — registro robusto por triângulos de estrelas (MIT).
+# Se ausente, o registro cai para o método próprio (cv2). Ver src/gpu/registration.py
+astroalign>=2.5        # puxa scikit-image + sep + scipy (autofoco usa scipy)
+
+# --- Desenvolvimento / testes (ver docs/10-arquitetura-e-testes.md) ---
+pytest>=8              # suíte de testes: rodar `pytest` na raiz
+pytest-cov             # cobertura: `pytest --cov=src`
+pytest-timeout         # marca testes lentos (ver pytest.ini)
+hypothesis             # testes baseados em propriedades (invariantes)
+
+# Opcional (dados reais de demo): photutils — só para scripts/fetch_real_data.py.
+# photutils>=1.8
+
+# GPU no PC de dev (opcional, MUITO recomendado se tiver NVIDIA + CUDA 12.x):
+#   pip install cupy-cuda12x
+# Faz o pipeline rodar na GPU aqui também — mesma família da Jetson (cupy-cuda12x).
+# Validado em RTX 4070 (CUDA 12.9). Sem ela, cai em NumPy/CPU automaticamente.
+
+# ============================================================================
+# Jetson Orin Nano Super (JetPack 6.2 / CUDA 12.6)
+# ============================================================================
+# NÃO instalar opencv-python na Jetson: compilar OpenCV com CUDA (ver docs/05).
+# GPU (acumulador float32 na VRAM) — wheel aarch64 pronta:
+#   pip install cupy-cuda12x
+# Câmera real via INDI (caminho de hardware, src/capture/indi_source.py):
+#   pip install pyindi-client astropy      # + indiserver indi_asi_ccd rodando
+#
+# O código detecta tudo automaticamente (src/backend.py + imports guardados):
+#   CuPy presente      -> GPU     | ausente -> NumPy/CPU
+#   astroalign presente-> reuso    | ausente -> fallback cv2
+#   pyindi-client       -> câmera  | (só na Jetson; o simulador não precisa)

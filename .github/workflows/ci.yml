@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    name: Testes Python (pytest, sem GPU/hardware)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Rodar a suíte (exclui hardware; GPU cai em NumPy)
+        run: pytest -m "not hardware" -q
+
+  cpp-tests:
+    name: Testes C++ (CTest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar e compilar
+        run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+      - name: Rodar CTest
+        run: |
+          cmake --build cpp/build
+          ctest --test-dir cpp/build --output-on-failure

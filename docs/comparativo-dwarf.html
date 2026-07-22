@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pau a pau: nosso projeto × DWARF 3</title>
+<style>
+  :root{
+    --bg:#eef1f7; --surface:#ffffff; --surface-2:#f4f6fb; --border:#d7dceb;
+    --text:#121728; --muted:#586080; --faint:#8a92ab;
+    --us:#0c9d88; --us-soft:rgba(12,157,136,.12);
+    --dwarf:#b56a12; --dwarf-soft:rgba(181,106,18,.12);
+    --tie:#6a6fa6; --tie-soft:rgba(106,111,166,.12);
+    --hair:rgba(18,23,40,.09);
+    --ha:#c93f7e;
+    --shadow:0 1px 2px rgba(18,23,40,.04),0 8px 30px rgba(18,23,40,.06);
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","JetBrains Mono",Consolas,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#080b13; --surface:#101627; --surface-2:#0c1120; --border:#222a40;
+      --text:#e7ecf7; --muted:#96a1bd; --faint:#6b7595;
+      --us:#2fe0c0; --us-soft:rgba(47,224,192,.13);
+      --dwarf:#f4a94a; --dwarf-soft:rgba(244,169,74,.13);
+      --tie:#9aa0d6; --tie-soft:rgba(154,160,214,.13);
+      --hair:rgba(255,255,255,.07);
+      --ha:#e5609d;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 40px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f7; --surface:#ffffff; --surface-2:#f4f6fb; --border:#d7dceb;
+    --text:#121728; --muted:#586080; --faint:#8a92ab;
+    --us:#0c9d88; --us-soft:rgba(12,157,136,.12);
+    --dwarf:#b56a12; --dwarf-soft:rgba(181,106,18,.12);
+    --tie:#6a6fa6; --tie-soft:rgba(106,111,166,.12);
+    --hair:rgba(18,23,40,.09); --ha:#c93f7e;
+    --shadow:0 1px 2px rgba(18,23,40,.04),0 8px 30px rgba(18,23,40,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#080b13; --surface:#101627; --surface-2:#0c1120; --border:#222a40;
+    --text:#e7ecf7; --muted:#96a1bd; --faint:#6b7595;
+    --us:#2fe0c0; --us-soft:rgba(47,224,192,.13);
+    --dwarf:#f4a94a; --dwarf-soft:rgba(244,169,74,.13);
+    --tie:#9aa0d6; --tie-soft:rgba(154,160,214,.13);
+    --hair:rgba(255,255,255,.07); --ha:#e5609d;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 40px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 clamp(16px,4vw,40px)}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.17em;
+    text-transform:uppercase;color:var(--faint)}
+  h1,h2,h3{text-wrap:balance;margin:0;letter-spacing:-.02em}
+  a{color:var(--us)}
+
+  .theme-toggle{position:fixed;top:14px;right:14px;z-index:10;font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.05em;color:var(--text);background:var(--surface);
+    border:1px solid var(--border);border-radius:99px;padding:.5em .9em;cursor:pointer;
+    box-shadow:var(--shadow)}
+  .theme-toggle:focus-visible{outline:2px solid var(--us);outline-offset:2px}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--border);
+    background:
+      radial-gradient(1px 1px at 18% 30%,var(--hair),transparent),
+      radial-gradient(1px 1px at 72% 22%,var(--hair),transparent),
+      radial-gradient(1.5px 1.5px at 44% 65%,var(--hair),transparent),
+      radial-gradient(1px 1px at 88% 54%,var(--hair),transparent),
+      radial-gradient(1px 1px at 30% 80%,var(--hair),transparent),
+      linear-gradient(180deg,var(--surface-2),var(--bg));}
+  .hero .wrap{padding-top:clamp(40px,7vw,74px);padding-bottom:clamp(34px,5vw,54px)}
+  h1{font-size:clamp(2.1rem,5.4vw,3.4rem);font-weight:800;margin:.5rem 0 .1rem;line-height:1.04}
+  h1 .us{color:var(--us)} h1 .dw{color:var(--dwarf)}
+  .lede{font-size:clamp(1.02rem,2vw,1.2rem);color:var(--muted);max-width:60ch;margin:.9rem 0 0}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:1.5rem;align-items:center}
+  .key{display:inline-flex;align-items:center;gap:.5em;font-family:var(--mono);
+    font-size:.82rem;color:var(--text)}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .dot.us{background:var(--us)} .dot.dw{background:var(--dwarf)}
+  .disclaim{margin-top:1.1rem;display:inline-flex;gap:.6em;align-items:center;
+    font-family:var(--mono);font-size:.72rem;color:var(--muted);
+    border:1px solid var(--border);background:var(--surface);border-radius:99px;
+    padding:.5em .95em}
+  .disclaim b{color:var(--text);font-weight:600}
+
+  section{padding:clamp(40px,6vw,64px) 0}
+  .sec-head{margin-bottom:1.6rem}
+  .sec-head h2{font-size:clamp(1.35rem,3vw,1.85rem);font-weight:750}
+  .sec-head p{color:var(--muted);margin:.5rem 0 0;max-width:64ch}
+
+  /* ---------- SCORECARD ---------- */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px;box-shadow:var(--shadow);border-top:3px solid var(--edge)}
+  .card.us{--edge:var(--us)} .card.dw{--edge:var(--dwarf)} .card.tie{--edge:var(--tie)}
+  .card .n{font-family:var(--mono);font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;
+    color:var(--edge);line-height:1}
+  .card h3{font-size:1.02rem;margin:.35rem 0 .9rem;font-weight:700}
+  .card ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.5rem}
+  .card li{font-size:.9rem;color:var(--muted);padding-left:1.1em;position:relative}
+  .card li::before{content:"";position:absolute;left:0;top:.62em;width:5px;height:5px;
+    border-radius:50%;background:var(--edge)}
+
+  /* ---------- STAT DUEL ---------- */
+  .duel{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:8px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px;box-shadow:var(--shadow)}
+  .stat .lab{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint)}
+  .stat .row{display:flex;justify-content:space-between;align-items:baseline;
+    gap:8px;margin-top:.7rem;padding-top:.55rem;border-top:1px solid var(--hair)}
+  .stat .row:first-of-type{border-top:0;padding-top:0}
+  .stat .who{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .stat .val{font-family:var(--mono);font-weight:700;font-variant-numeric:tabular-nums;
+    font-size:1.02rem;text-align:right}
+  .stat .val.us{color:var(--us)} .stat .val.dw{color:var(--dwarf)}
+
+  /* ---------- TABLE ---------- */
+  .tscroll{overflow-x:auto;border:1px solid var(--border);border-radius:14px;
+    background:var(--surface);box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:720px}
+  th,td{text-align:left;padding:13px 16px;vertical-align:top;border-top:1px solid var(--hair)}
+  thead th{position:sticky;top:0;background:var(--surface-2);border-top:0;z-index:1;
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);font-weight:600}
+  thead th.us{color:var(--us)} thead th.dw{color:var(--dwarf)}
+  td.dim{font-weight:650;color:var(--text);white-space:nowrap}
+  td.dim small{display:block;font-weight:400;font-family:var(--mono);font-size:.68rem;
+    color:var(--faint);letter-spacing:.03em;margin-top:.15rem}
+  td.cell{color:var(--muted);font-size:.9rem;min-width:200px}
+  td.cell b{color:var(--text);font-weight:600}
+  tbody tr:hover{background:var(--surface-2)}
+  .verdict{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.05em;
+    padding:.32em .6em;border-radius:6px;white-space:nowrap;display:inline-block}
+  .verdict.us{color:var(--us);background:var(--us-soft)}
+  .verdict.dw{color:var(--dwarf);background:var(--dwarf-soft)}
+  .verdict.tie{color:var(--tie);background:var(--tie-soft)}
+
+  /* ---------- ARCHITECTURE ---------- */
+  .spotlight{background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--ha);border-radius:14px;padding:clamp(20px,3vw,30px);
+    box-shadow:var(--shadow);margin-bottom:22px}
+  .spotlight .eyebrow{color:var(--ha)}
+  .spotlight h3{font-size:1.25rem;margin:.4rem 0 .3rem;font-weight:750}
+  .spotlight p{color:var(--muted);margin:.2rem 0 1.2rem;max-width:70ch}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+  .step{flex:1 1 120px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:10px;padding:11px 13px;position:relative}
+  .step .k{font-family:var(--mono);font-size:.64rem;color:var(--faint);letter-spacing:.08em}
+  .step .t{font-size:.86rem;font-weight:600;margin-top:.2rem}
+  .step .src{font-family:var(--mono);font-size:.6rem;margin-top:.45rem;
+    padding:.15em .5em;border-radius:5px;display:inline-block}
+  .step .src.reuse{color:var(--us);background:var(--us-soft)}
+  .step .src.build{color:var(--ha);background:rgba(201,63,126,.12)}
+  .arrow{align-self:center;color:var(--faint);font-family:var(--mono);font-size:.9rem}
+
+  .amap{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .acard{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;box-shadow:var(--shadow)}
+  .acard h4{margin:0 0 .55rem;font-size:.98rem;font-weight:700;display:flex;
+    align-items:center;gap:.5em}
+  .acard h4 .num{font-family:var(--mono);font-size:.72rem;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+  .acard .line{display:flex;gap:.55em;font-size:.85rem;margin-top:.4rem;align-items:baseline}
+  .tag{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.04em;
+    padding:.2em .5em;border-radius:5px;flex:none;margin-top:.1em}
+  .tag.reuse{color:var(--us);background:var(--us-soft)}
+  .tag.build{color:var(--ha);background:rgba(201,63,126,.13)}
+  .acard .line span{color:var(--muted)} .acard .line b{color:var(--text);font-weight:600}
+
+  footer{border-top:1px solid var(--border);padding:28px 0 48px;color:var(--faint)}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;
+    font-family:var(--mono);font-size:.72rem}
+
+  @media (max-width:820px){
+    .cards{grid-template-columns:1fr}
+    .duel{grid-template-columns:repeat(2,1fr)}
+    .amap{grid-template-columns:1fr}
+    .arrow{display:none}
+  }
+  @media (max-width:460px){ .duel{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" type="button" onclick="(function(r){r.dataset.theme=r.dataset.theme==='dark'?'light':(r.dataset.theme==='light'?'dark':(matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark'));})(document.documentElement)">◐ tema</button>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Telescópio robótico · Jetson Orin × DWARFLAB</div>
+    <h1>Pau a pau: <span class="us">nosso projeto</span> × <span class="dw">DWARF&nbsp;3</span></h1>
+    <p class="lede">O que o DWARF já faz, onde podemos superá-lo — e, principalmente,
+      o que cada capacidade <strong>exige da nossa arquitetura</strong>. O modelo a seguir
+      é o <em>auto-find</em>: o telescópio que procura o alvo sozinho.</p>
+    <div class="legend">
+      <span class="key"><span class="dot us"></span>Nosso projeto (Jetson)</span>
+      <span class="key"><span class="dot dw"></span>DWARF 3</span>
+    </div>
+    <div class="disclaim"><b>DWARF 3</b>= produto real (2026) &nbsp;·&nbsp; <b>Nosso projeto</b>= alvo / roadmap (a construir)</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- SCORECARD -->
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Placar geral</div>
+      <h2>Onde cada um vence — leitura honesta</h2>
+      <p>O DWARF é hoje o melhor <em>produto</em>: maduro, portátil, barato. O nosso é o melhor
+        <em>teto</em>: mais processamento, óptica aberta e ecossistema livre. Um é realidade; o outro, potencial.</p>
+    </div>
+    <div class="cards">
+      <div class="card dw">
+        <div class="n">7</div>
+        <h3>O DWARF ganha hoje</h3>
+        <ul>
+          <li>Preço (~US$ 549)</li>
+          <li>Portabilidade: 1,3 kg, selado, bateria</li>
+          <li>Pronto-para-usar (liga e funciona)</li>
+          <li>Software maduro + app móvel polido</li>
+          <li>Modos terrestres: fauna, paisagem, panorama, vídeo 4K</li>
+          <li>Mosaico automático já pronto</li>
+          <li>Suporte e comunidade de produto</li>
+        </ul>
+      </div>
+      <div class="card us">
+        <div class="n">11</div>
+        <h3>Nós superamos (teto)</h3>
+        <ul>
+          <li>Processamento: 67→157 TOPS vs ~5 (~13–30×)</li>
+          <li>Stacking float32 na GPU (VRAM)</li>
+          <li>Lucky imaging: rejeição por FWHM/Laplaciano</li>
+          <li>Óptica aberta e maior (35mm → 50–72mm)</li>
+          <li>Sensor de pixel maior, 1×1 unbinned + resfriável</li>
+          <li>Montagem harmônica EQ real (sem contrapeso)</li>
+          <li>Subs mais longos (DWARF trava em ~60s)</li>
+          <li>Autoguiding possível (DWARF não tem → 30–50% rejeição)</li>
+          <li>Tracking IA em tempo real (satélites/ISS)</li>
+          <li>100% local/offline (DWARF usa nuvem p/ panorama e IA)</li>
+          <li>Ecossistema aberto (INDI/WebSocket) + reparável</li>
+        </ul>
+      </div>
+      <div class="card tie">
+        <div class="n">5</div>
+        <h3>Empate / depende</h3>
+        <ul>
+          <li><b>Auto-find (plate solving): ambos apontam sozinhos</b></li>
+          <li>Autofoco autônomo: ambos têm</li>
+          <li>Campo de visão: DWARF mais largo nativo</li>
+          <li>Denoise por IA: ambos</li>
+          <li>Filtros: DWARF integrado / nós flexível</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAT DUEL -->
+  <section style="padding-top:0">
+    <div class="sec-head">
+      <div class="eyebrow">Duelo de números</div>
+      <h2>As quatro medidas que definem o caráter</h2>
+    </div>
+    <div class="duel">
+      <div class="stat">
+        <div class="lab">Processamento</div>
+        <div class="row"><span class="who">Nosso</span><span class="val us">67–157 TOPS</span></div>
+        <div class="row"><span class="who">DWARF</span><span class="val dw">~5 TOPS</span></div>
+      </div>
+      <div class="stat">
+        <div class="lab">Abertura óptica</div>
+        <div class="row"><span class="who">Nosso</span><span class="val us">50–72 mm</span></div>
+        <div class="row"><span class="who">DWARF</span><span class="val dw">35 mm</span></div>
+      </div>
+      <div class="stat">
+        <div class="lab">Empilhamento</div>
+        <div class="row"><span class="who">Nosso</span><span class="val us">float32 GPU</span></div>
+        <div class="row"><span class="who">DWARF</span><span class="val dw">SoC ARM</span></div>
+      </div>
+      <div class="stat">
+        <div class="lab">Preço</div>
+        <div class="row"><span class="who">Nosso</span><span class="val us">~US$ 4.000</span></div>
+        <div class="row"><span class="who">DWARF</span><span class="val dw">~US$ 549</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAU A PAU TABLE -->
+  <section style="padding-top:0">
+    <div class="sec-head">
+      <div class="eyebrow">Comparativo detalhado</div>
+      <h2>Pau a pau, dimensão por dimensão</h2>
+      <p>Veredito por linha: <span class="verdict us">NÓS</span> <span class="verdict dw">DWARF</span>
+        <span class="verdict tie">EMPATE / TRADEOFF</span></p>
+    </div>
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr><th>Dimensão</th><th class="dw">DWARF 3 (hoje)</th><th class="us">Nosso projeto (alvo)</th><th>Veredito</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="dim">Óptica</td>
+            <td class="cell"><b>35 mm f/4.3</b> (150 mm), lente fixa dupla</td>
+            <td class="cell">Apo <b>50–72 mm f/4–5</b> (250–400 mm), <b>intercambiável</b></td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Sensor</td>
+            <td class="cell">Sony <b>IMX678</b> 1/1.8", 2.0 µm, 8.3 MP — <b>forçado a binning 2×2</b> (~2,75"/px)</td>
+            <td class="cell">Sony <b>IMX585</b> 1/1.2", <b>2.9 µm</b>, 8.3 MP, <b>1×1 unbinned</b> (+ resfriável)</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Campo de visão</td>
+            <td class="cell">Mais largo por FL curto (bom p/ grandes nebulosas)</td>
+            <td class="cell">~3,2° a 250 mm; depende da óptica escolhida</td>
+            <td><span class="verdict tie">DWARF nativo</span></td></tr>
+          <tr><td class="dim">Compute</td>
+            <td class="cell">SoC ARM + <b>~5 TOPS</b> NPU</td>
+            <td class="cell">Orin <b>67→157 TOPS</b> + 1024 CUDA cores</td>
+            <td><span class="verdict us">NÓS ~13–30×</span></td></tr>
+          <tr><td class="dim">Live stacking</td>
+            <td class="cell">Tempo real no SoC</td>
+            <td class="cell"><b>CUDA float32 ponderado</b> na VRAM</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Seleção de frames<small>lucky imaging</small></td>
+            <td class="cell">Rejeição básica</td>
+            <td class="cell"><b>FWHM + Var. Laplaciana</b> na GPU</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Auto-find / GOTO<small>procura o alvo</small></td>
+            <td class="cell">Plate solving <b>on-device</b>, centraliza sozinho</td>
+            <td class="cell"><b>cedar-solve / astrometry.net</b> local, mesmo laço</td>
+            <td><span class="verdict tie">EMPATE</span></td></tr>
+          <tr><td class="dim">Autofoco</td>
+            <td class="cell">Automático</td>
+            <td class="cell">EAF + curva hipérbole (Ekos), FWHM da GPU</td>
+            <td><span class="verdict tie">EMPATE</span></td></tr>
+          <tr><td class="dim">Montagem</td>
+            <td class="cell">Altaz motorizada; EQ por inclinação física</td>
+            <td class="cell"><b>Harmônica AM3N AZ/EQ real</b>, sem contrapeso</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Exposição máx.</td>
+            <td class="cell">~15 s altaz / 60 s (até 120 s) em EQ · <b>EQ obrigatório ≥30 s</b></td>
+            <td class="cell">Subs mais longos c/ EQ harmônico real (sem alinhamento finicky)</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Autoguiding</td>
+            <td class="cell"><b>Nenhum</b> → reviewers relatam <b>30–50% de rejeição</b> a 60 s</td>
+            <td class="cell">Lucky imaging na GPU + <b>PHD2 opcional</b></td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Rastreamento IA</td>
+            <td class="cell">Tracking de cena/objeto (terrestre)</td>
+            <td class="cell"><b>YOLOv8-TensorRT + fluxo óptico &gt;60 fps</b> (ISS/satélites)</td>
+            <td><span class="verdict us">NÓS · Fase 4</span></td></tr>
+          <tr><td class="dim">Mosaico / panorama</td>
+            <td class="cell"><b>Pronto</b> (Pano Weave) — porém <b>exige nuvem/internet</b></td>
+            <td class="cell">A construir (reuso de Siril headless, local)</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Modos variados<small>fauna · vídeo · timelapse</small></td>
+            <td class="cell"><b>Sim</b> — fauna, paisagem, 4K30, timelapse, Milky Way, star-trail, plano multi-alvo</td>
+            <td class="cell">Fora do foco inicial (céu profundo primeiro)</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Filtros</td>
+            <td class="cell">VIS / Astro / dual-band <b>integrados</b></td>
+            <td class="cell">Gaveta externa: L-Pro / L-eXtreme (flexível)</td>
+            <td><span class="verdict tie">TRADEOFF</span></td></tr>
+          <tr><td class="dim">Denoise por IA</td>
+            <td class="cell">On-device / app</td>
+            <td class="cell">GraXpert (ONNX→TensorRT) no frame final</td>
+            <td><span class="verdict tie">EMPATE</span></td></tr>
+          <tr><td class="dim">Processamento<small>local vs nuvem</small></td>
+            <td class="cell">Live stack on-device, mas <b>panorama + parte da IA exigem nuvem</b></td>
+            <td class="cell"><b>100% local/offline</b> na Jetson — nada de nuvem</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">App / UX</td>
+            <td class="cell"><b>App móvel iOS/Android maduro</b></td>
+            <td class="cell">UI web (WebSocket) a construir</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Conectividade / API</td>
+            <td class="cell">Ecossistema fechado (app proprietário)</td>
+            <td class="cell"><b>INDI + WebSocket aberto</b>, sem lock-in</td>
+            <td><span class="verdict us">NÓS</span></td></tr>
+          <tr><td class="dim">Portabilidade</td>
+            <td class="cell"><b>1,3 kg selado</b>, bateria 10.000 mAh, tripé</td>
+            <td class="cell">Bancada, mais peças, 12 V (portátil só depois)</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Pronto-para-usar</td>
+            <td class="cell">Liga e funciona em minutos</td>
+            <td class="cell">Montar, compilar, calibrar</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Preço</td>
+            <td class="cell"><b>~US$ 549</b></td>
+            <td class="cell">~US$ 4.000 (DIY, óptica aberta + compute)</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+          <tr><td class="dim">Maturidade</td>
+            <td class="cell">Produto shipado, anos de firmware</td>
+            <td class="cell">Protótipo — tudo a construir</td>
+            <td><span class="verdict dw">DWARF</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE IMPLICATIONS -->
+  <section style="padding-top:0">
+    <div class="sec-head">
+      <div class="eyebrow">O objetivo real</div>
+      <h2>O que isso exige da nossa arquitetura</h2>
+      <p>Cada capacidade do DWARF vira um requisito. A regra: <span style="color:var(--us)">reusar</span>
+        o que já existe pronto, <span style="color:var(--ha)">construir</span> só o diferencial de GPU.
+        E, diferente do DWARF, <b>tudo roda 100% local — sem nuvem</b>.</p>
+    </div>
+
+    <div class="spotlight">
+      <div class="eyebrow">A capacidade-modelo</div>
+      <h3>O “procurar o alvo sozinho” = laço de plate solving</h3>
+      <p>Não é força bruta nem exige processamento pesado — é busca por hash. O que o DWARF faz,
+        nós reusamos: o solver (<b>cedar-solve</b>) e o controle da montagem (<b>INDI</b>). Só
+        construímos o <b>orquestrador</b> (a máquina de estados que roda o laço até centralizar).</p>
+      <div class="flow">
+        <div class="step"><div class="k">01</div><div class="t">Nivelar + hora/GPS</div><span class="src reuse">REUSAR · INDI</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">02</div><div class="t">Capturar frame</div><span class="src reuse">REUSAR · SDK ZWO</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">03</div><div class="t">Resolver (RA/DEC)</div><span class="src reuse">REUSAR · cedar-solve</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">04</div><div class="t">Erro → corrigir motores</div><span class="src build">CONSTRUIR · orquestrador</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">05</div><div class="t">Repetir até centralizar</div><span class="src build">CONSTRUIR · loop</span></div>
+      </div>
+    </div>
+
+    <div class="amap">
+      <div class="acard">
+        <h4><span class="num">A</span> Auto-find / GOTO</h4>
+        <div class="line"><span class="tag reuse">REUSAR</span><span><b>cedar-solve</b>, astrometry.net, INDI (montagem)</span></div>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span>máquina de estados do orquestrador (slew→solve→corrige)</span></div>
+      </div>
+      <div class="acard">
+        <h4><span class="num">B</span> Live stacking</h4>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span><b>stacker CUDA float32</b> ponderado na VRAM (o coração)</span></div>
+        <div class="line"><span class="tag reuse">REUSAR</span><span>astroalign/sep p/ bootstrap do referencial</span></div>
+      </div>
+      <div class="acard">
+        <h4><span class="num">C</span> Seleção lucky imaging</h4>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span><b>portão FWHM + Var. Laplaciana</b> na GPU</span></div>
+        <div class="line"><span class="tag reuse">REUSAR</span><span>photutils como referência de medição</span></div>
+      </div>
+      <div class="acard">
+        <h4><span class="num">D</span> Autofoco</h4>
+        <div class="line"><span class="tag reuse">REUSAR</span><span>algoritmo hipérbole+GSL do Ekos; driver <b>EAF</b></span></div>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span>alimentação do FWHM medido na GPU</span></div>
+      </div>
+      <div class="acard">
+        <h4><span class="num">E</span> Rastreio + EQ mode</h4>
+        <div class="line"><span class="tag reuse">REUSAR</span><span>tracking sideral da montagem via INDI</span></div>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span><b>de-rotação de campo</b> no stacker; tracking IA TensorRT</span></div>
+      </div>
+      <div class="acard">
+        <h4><span class="num">F</span> Denoise IA + captura + UX</h4>
+        <div class="line"><span class="tag reuse">REUSAR</span><span><b>GraXpert</b> (TensorRT); SDK ZWO+INDI (captura)</span></div>
+        <div class="line"><span class="tag build">CONSTRUIR</span><span>UI web (WebSocket); caminho MIPI CSI (Fase 2)</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Telescópio Jetson · comparativo de arquitetura</span>
+    <span>DWARF 3 = realidade 2026 · Nosso = alvo/roadmap · dados: pesquisa de mercado jul/2026</span>
+  </div>
+</footer>
+</body>
+</html>
