@@ -21,10 +21,11 @@ from src.server.studio import StudioServer, CATALOG
 def main():
     ap = argparse.ArgumentParser(description="Estudio de processamento do telescopio")
     ap.add_argument("--port", type=int, default=8010)
+    ap.add_argument("--host", default="0.0.0.0", help="0.0.0.0 = acessivel na rede (celular)")
     ap.add_argument("--preview", type=int, default=1500, help="lado max do preview (px)")
     a = ap.parse_args()
 
-    srv = StudioServer(host="127.0.0.1", port=a.port, preview_max=a.preview)
+    srv = StudioServer(host=a.host, port=a.port, preview_max=a.preview)
     srv.start()
     print(f">> Estudio: http://localhost:{a.port}")
     print(f">> Alvos: {', '.join(m['name'] for m in CATALOG.values())}")
