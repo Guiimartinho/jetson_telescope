@@ -29,3 +29,7 @@ cpp/compile_commands.json      # gerado (caminhos absolutos); recriar com cmake
 # SO / editor
 .DS_Store
 Thumbs.db
+
+# arquivo fantasma do Windows (nome reservado)
+nul
+NUL

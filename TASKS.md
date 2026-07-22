@@ -152,10 +152,11 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
 
 ---
 
-## Milestone E — Bring-up na Orin (a Jetson você JÁ tem; a câmera ainda não)
-- Portar pra Orin Nano Super 8GB: JetPack, OpenCV com CUDA (`cv2.cuda`), TensorRT (engine YOLO/DLA),
-  INDI server, `nvpmodel`/`jetson_clocks`. Rodar a stack sim + INDI simuladores na Orin → **medir FPS/térmico reais**.
-- Decisão de compra informada: os números da Orin dizem se 8GB basta ou se precisa Orin NX 16GB — ANTES da câmera.
+## ✅ Milestone E — Bring-up na Orin  *(feito — docs/28)*
+- Software portado e rodando na Orin Nano Super 8GB (JetPack 6.2/CUDA 12.6/TensorRT 10.3): **164 testes
+  verdes**, backend **CuPy/GPU (Orin)**, painel + Estúdio acessíveis pelo celular, **INDI real 4/4**
+  (achou+corrigiu 2 bugs: timing do foco, UPLOAD_MODE da câmera). Benchmark: 4K stack **4,3×** GPU, ~30 FPS.
+- 8GB deu conta da stack. **Falta (otimização):** OpenCV-CUDA (compilação de horas), engine TensorRT do YOLO.
 
 ## Milestone F — Bring-up de hardware (precisa das peças físicas)
 - Captura **MIPI CSI zero-copy** (Argus/NVMM) ou USB3/INDI do IMX585; foco/solve/tracking no céu real.

@@ -87,6 +87,7 @@ são armadilhas que travam meses sem serem o diferencial. Por isso:
 | [`docs/25-deconv-denoise.md`](docs/25-deconv-denoise.md) | ⭐ **T19: deconvolução Richardson-Lucy + denoise (as alavancas que passam a DWARF)** |
 | [`docs/26-catalogo-atlas.md`](docs/26-catalogo-atlas.md) | ⭐ **Catálogo do céu real (14k objetos) + filtro pela óptica + visibilidade — `run_catalog.py`** |
 | [`docs/27-mais-alvos-e-hotpixels.md`](docs/27-mais-alvos-e-hotpixels.md) | T21: mais alvos reais (M51 galáxia + Roseta) + remoção de hot pixels (walking noise) |
+| [`docs/28-bringup-jetson.md`](docs/28-bringup-jetson.md) | ⭐ **Milestone E: bring-up na Jetson Orin — roda no Orin (GPU), painel/estúdio no celular, INDI real 4/4** |
 | [`TASKS.md`](TASKS.md) | ⭐ **Plano de execução: Fase 1→4 + Milestones D/E/F (fechar software antes da câmera)** |
 
 ---
