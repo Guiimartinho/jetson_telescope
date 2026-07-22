@@ -80,9 +80,9 @@ class Studio:
             from ..postproc.starless import remove_stars
             rgb = remove_stars(rgb).astype(np.uint8)
         if ai_denoise > 0:                             # denoise IA (ONNX se houver modelo; senão clássico)
-            import os
             from ..postproc.ai_denoise import ai_denoise as _aid
-            rgb = _aid(rgb, model_path=os.environ.get("STUDIO_DENOISE_MODEL"),
+            from ..postproc.models import model_for
+            rgb = _aid(rgb, model_path=model_for("denoise"),
                        strength=float(ai_denoise)).astype(np.uint8)
         ok, buf = cv2.imencode(".jpg", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
                                [cv2.IMWRITE_JPEG_QUALITY, quality])

@@ -33,3 +33,7 @@ Thumbs.db
 # arquivo fantasma do Windows (nome reservado)
 nul
 NUL
+
+# modelos de IA (grandes, versionados fora do git) — ver models/README.md
+models/*.onnx
+models/*.pth
