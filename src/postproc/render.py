@@ -11,6 +11,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 import cv2
 
+from ..backend import xp, to_device, asnumpy
 from .enhance import remove_gradient
 from .deconv import deconvolve_rgb, denoise_luminance
 
@@ -59,45 +60,50 @@ def render(linear, p: RenderParams | None = None, max_side: int | None = None) -
     (remove o green cast) → trim manual R/G/B. O debayer correto (src/gpu/debayer) já evita o
     artefato de cor na captura."""
     p = p or RenderParams()
-    img = np.asarray(linear, dtype=np.float32)
-    if img.ndim == 2:
-        img = np.repeat(img[..., None], 3, axis=2)
-    img = img.copy()
+    arr = np.asarray(linear, dtype=np.float32)
+    if arr.ndim == 2:
+        arr = np.repeat(arr[..., None], 3, axis=2)
 
     if max_side:                                   # preview mais leve p/ ajuste interativo
-        h, w = img.shape[:2]
+        h, w = arr.shape[:2]
         s = max_side / max(h, w)
         if s < 1.0:
-            img = cv2.resize(img, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
+            arr = cv2.resize(arr, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
+
+    # --- parte float pesada: na GPU (xp=CuPy na Jetson/RTX; NumPy no CI). `to_device` é no-op
+    #     se `linear` já estiver na VRAM (o estúdio mantém o preview no device p/ zerar cópias). ---
+    img = to_device(arr).astype(xp.float32)
 
     if p.remove_grad:                              # 1) remove gradiente (GENTIL: só o gradiente
-        for c in range(3):                         #    de céu muito suave, sem comer a nebulosa)
-            img[..., c] = remove_gradient(img[..., c], downscale=32, sigma=6.0)
+        h = asnumpy(img)                           #    de céu muito suave). remove_gradient é cv2 (host)
+        for c in range(3):
+            h[..., c] = remove_gradient(h[..., c], downscale=32, sigma=6.0)
+        img = to_device(h)
 
     for c in range(3):                             # 2) fundo do céu -> neutro (percentil BAIXO por
-        sky = np.percentile(img[..., c], p.bg_percentile)   #    canal — não come a nebulosa difusa)
-        img[..., c] = np.clip(img[..., c] - sky, 0, None)
+        sky = xp.percentile(img[..., c], p.bg_percentile)   #    canal — não come a nebulosa difusa)
+        img[..., c] = xp.clip(img[..., c] - sky, 0, None)
 
     if p.scnr > 0:                                 # 3) SCNR: remove o excesso de verde do OSC
         neutral = (img[..., 0] + img[..., 2]) * 0.5
-        img[..., 1] -= p.scnr * np.clip(img[..., 1] - neutral, 0, None)
+        img[..., 1] -= p.scnr * xp.clip(img[..., 1] - neutral, 0, None)
 
     img[..., 0] *= p.r_gain                        # 4) trim de cor manual (leve Hα por padrão)
     img[..., 1] *= p.g_gain
     img[..., 2] *= p.b_gain
 
-    if p.deconv > 0:                               # 5) deconvolução R-L na luminância (T19)
-        img = deconvolve_rgb(img, iterations=int(round(p.deconv)), sigma=1.5)
+    if p.deconv > 0:                               # 5) deconvolução R-L na luminância (T19; cv2, host)
+        img = to_device(deconvolve_rgb(asnumpy(img), iterations=int(round(p.deconv)), sigma=1.5))
 
-    hi = np.percentile(img, p.white) + 1e-6        # 6) normaliza + ponto preto + asinh
-    x = np.clip(img / hi, 0, None)
-    x = np.clip((x - p.black) / (1.0 - p.black + 1e-6), 0, None)
-    out = np.arcsinh(p.stretch * x) / np.arcsinh(p.stretch)
-    out = np.clip(out, 0, 1)
+    hi = xp.percentile(img, p.white) + 1e-6        # 6) normaliza + ponto preto + asinh
+    x = xp.clip(img / hi, 0, None)
+    x = xp.clip((x - p.black) / (1.0 - p.black + 1e-6), 0, None)
+    out = xp.arcsinh(p.stretch * x) / float(np.arcsinh(p.stretch))
+    out = xp.clip(out, 0, 1)
     if abs(p.gamma - 1.0) > 1e-3:
-        out = np.power(out, 1.0 / max(p.gamma, 1e-3))
+        out = xp.power(out, 1.0 / max(p.gamma, 1e-3))
 
-    u8 = (out * 255).astype(np.uint8)              # RGB 8-bit
+    u8 = asnumpy(out * 255).astype(np.uint8)       # RGB 8-bit -> host (passos cosméticos em cv2)
     if p.star_reduce > 0:                          # 5) reduz estrelas (morfologia leve)
         opened = cv2.morphologyEx(u8, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         u8 = cv2.addWeighted(u8, 1 - p.star_reduce, opened, p.star_reduce, 0)
