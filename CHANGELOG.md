@@ -5,6 +5,16 @@ Todas as mudanças notáveis do projeto. Formato baseado em
 
 ## [Não lançado]
 
+### T7/T21/T22 — CI + git, catálogo do céu, mais alvos reais (2026-07-21)
+- **T22 catálogo**: `src/core/catalog.py` (OpenNGC/pyongc, ~14k objetos) — `find()` (RA/DEC p/ GOTO),
+  `Rig` (FOV+mag limite), `framable()` (1868 capturáveis c/ nosso rig), `visible()` (altitude); `run_catalog.py`.
+  GOTO aponta em QUALQUER alvo. Doc `docs/26`.
+- **T21 alvos**: baixados/processados M51 (galáxia) + NGC2244 (Roseta) do MILAN → Estúdio com 3 alvos reais.
+  Script ganhou `--mono` + `remove_hot_pixels` (`gpu/calibration`, testado) — corrige "walking noise" sem darks. `docs/27`.
+- **T7 CI**: `git init` + commit inicial (main, 148 arquivos), `.github/workflows/ci.yml` (pytest `-m "not
+  hardware"` + CTest), `.gitignore` + `requirements.txt` completos. **166 testes verdes no modo CI.**
+- Deconvolução Richardson-Lucy + denoise (`postproc/deconv.py`) + preset H-alpha no estúdio. Doc `docs/25`.
+
 ### Painel: foto real visível + correção do congelamento (2026-07-21)
 - **Modo "Dados reais (M67)"** no painel (`capture/real_source.py` `RealFitsSource` + `_run_realdata`):
   empilha a FOTO REAL do M67 ao vivo (registro por estrelas reais + lucky imaging), tornando o dado do

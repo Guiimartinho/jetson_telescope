@@ -140,11 +140,15 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
   mag limite), `framable()` (1868 capturáveis c/ nossa óptica), `visible()` (altitude no horizonte).
   `run_catalog.py` ("o que fotografar hoje"). GOTO usa `catalog.find` (aponta em QUALQUER alvo). Testes: 6.
 
-### ◑ T21 — Mais alvos reais no catálogo do Estúdio  *(em andamento)*
-- Baixar/processar mais datasets (MILAN Zenodo: **M51 galáxia + NGC2244 Roseta — baixando ~3,7GB**) →
-  estúdio com galáxia + nebulosas. Script já suporta mono (`--mono`).
+### ✅ T21 — Mais alvos reais no Estúdio  *(feito)*
+- Baixados e processados **M51 (galáxia) + NGC2244 (Roseta)** do MILAN Survey. Estúdio agora tem 3 alvos
+  reais (2 nebulosas + 1 galáxia). Script ganhou `--mono` e **remoção de hot pixels** (`gpu/calibration.
+  remove_hot_pixels`, testada) — sem darks, hot pixels viravam "walking noise". Ver docs/27.
 
-### ☐ T7 — CI — git init + GitHub Actions
+### ✅ T7 — CI + git  *(feito)*
+- `git init` + commit inicial (branch main, 148 arquivos). `.github/workflows/ci.yml`: pytest `-m "not
+  hardware"` + CTest C++. `.gitignore` (exclui dados grandes/stacks), `requirements.txt` completo.
+- **Falta só** (quando o usuário quiser): criar o remoto GitHub e `git push` → o CI roda no push.
 
 ---
 
