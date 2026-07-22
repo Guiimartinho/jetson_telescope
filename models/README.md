@@ -19,6 +19,19 @@ No Orin (aarch64, Python 3.10) os apps x86 **não** rodam: StarNet++ é binário
 Python ≥3.11, Cosmic Clarity precisa do torch da Jetson. Então embarcamos os **modelos** (.onnx) e os
 rodamos com o nosso runner (`ai_denoise.OnnxDenoiser`) — que já escolhe TensorRT > CUDA > CPU.
 
+## Atlas de modelos FOSS (pesquisa 2026-07 — ver artifact "Atlas de IA")
+
+| Projeto | Tarefas | Licença | Jetson |
+|---|---|---|---|
+| **Cosmic Clarity** (setiastro) ⭐ | denoise + sharpen/deconv + super-res + **remoção de satélite** (astro!) | **MIT** | `.pth`→ONNX |
+| **Real-ESRGAN** (xinntao) | super-resolução/upscaling 2×–4× | BSD-3 | ONNX |
+| **NAFNet / Restormer / SCUNet** | denoise/deblur SOTA (geral) | MIT/BSD | ONNX |
+| **astro-csbdeep** / GraXpert | denoise + gradiente | BSD-3 / GPL | ONNX |
+| **StarNet v2** | remover estrelas (1 modelo) | MIT code / pesos NC | ONNX (conversão) |
+| **CAREamics / Noise2Void** ⭐ | **TREINAR nosso denoise** (self-supervised, só dado ruidoso) | MIT | treina no PC → ONNX |
+
+Evitar (pagos): RC-Astro (BlurX/NoiseX/StarXTerminator), PixInsight. Os FOSS acima cobrem o mesmo.
+
 ## Como obter cada um
 
 - **denoise / gradient (GraXpert)**: instalar o GraXpert num PC (Py≥3.11), rodar uma vez p/ baixar os
