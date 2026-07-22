@@ -15,6 +15,9 @@ output/
 data/stacks/
 *.zip
 *.fit
+# assets de demo baixados (ex.: Lua CC BY-SA — ver studio PLANETARY; regenerável por download)
+data/*.jpg
+data/*.png
 # exceção: a fixture pequena de teste (~1 MB) fica versionada
 !tests/data/real_starfield_m67.fits
 

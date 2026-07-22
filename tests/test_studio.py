@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from src.server.studio import Studio, CATALOG, _load_linear
+from src.server.studio import Studio, CATALOG, PLANETARY, _load_linear, render_planetary
 from src.postproc.render import RenderParams, PRESETS
 
 
@@ -39,3 +39,33 @@ def test_studio_missing_target_returns_none():
 
 def test_real_catalog_entry_present():
     assert "lagoon_trifid" in CATALOG                              # o alvo real do dataset Siril
+
+
+def test_render_planetary_wavelet_adds_detail():
+    """render_planetary com wavelets deve revelar detalhe (var. do Laplaciano) num base LIMPO.
+
+    Num base limpo (baixo ruído), realçar as escalas médias aumenta o detalhe. (Num frame ruidoso o
+    número cai, porque a escala fina — ruído — é atenuada; por isso o teste usa base limpo.)"""
+    import cv2
+    from src.planetary.simulator import PlanetSimulator
+    base = PlanetSimulator(size=96, seed=1, color=True, noise=0.4, seeing=(1.5, 1.5)).frames(1)[0]
+    soft = render_planetary(base, {"wavelet": "0.0"})
+    sharp = render_planetary(base, {"wavelet": "1.2"})
+    lv = lambda x: cv2.Laplacian(cv2.cvtColor(x, cv2.COLOR_RGB2GRAY), cv2.CV_64F).var()
+    assert soft.shape == base.shape and soft.dtype == np.uint8
+    assert lv(sharp) > lv(soft)
+
+
+def test_studio_renders_planetary_target():
+    """Alvo planetário: gera o lucky-stack sob demanda e renderiza JPEG (sem FITS)."""
+    s = Studio()
+    jpg = s.render_planetary_jpeg("jupiter", {"wavelet": "1.2", "saturation": "1.3"})
+    assert jpg is not None and jpg[:2] == b"\xff\xd8"
+    assert s._mode.get("jupiter") == "planetary"                   # marcado como planetário
+    jpg2 = s.render_planetary_jpeg("jupiter", {"wavelet": "0.5"})  # base cacheado
+    assert jpg2 is not None and jpg2[:2] == b"\xff\xd8"
+
+
+def test_planetary_targets_defined():
+    assert "jupiter" in PLANETARY and "moon" in PLANETARY
+    assert PLANETARY["jupiter"]["mode"] == "planetary"

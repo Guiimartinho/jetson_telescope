@@ -22,7 +22,7 @@ def main():
     ap = argparse.ArgumentParser(description="Estudio de processamento do telescopio")
     ap.add_argument("--port", type=int, default=8010)
     ap.add_argument("--host", default="0.0.0.0", help="0.0.0.0 = acessivel na rede (celular)")
-    ap.add_argument("--preview", type=int, default=1500, help="lado max do preview (px)")
+    ap.add_argument("--preview", type=int, default=1000, help="lado max do preview (px) — 1000 = ajuste fluido")
     a = ap.parse_args()
 
     srv = StudioServer(host=a.host, port=a.port, preview_max=a.preview)
