@@ -104,6 +104,45 @@ class OnnxDenoiser:
         return out / np.maximum(wsum[..., None] if out.ndim == 3 else wsum, 1e-6)
 
 
+_SESSIONS: dict = {}          # cache de OnnxDenoiser por caminho de modelo
+_SESS_LOCK = None
+
+
+def get_denoiser(model_path: str, tile: int = 512):
+    """OnnxDenoiser MEMOIZADO por modelo. Criar a sessão ONNX (deserializar a engine TensorRT do
+    cache em disco) custa ~2 s no Orin; reusar a mesma sessão entre renders deixa os sliders de IA
+    rápidos (só a 1ª chamada paga o carregamento). Thread-safe."""
+    import threading
+    global _SESS_LOCK
+    if _SESS_LOCK is None:
+        _SESS_LOCK = threading.Lock()
+    key = (os.path.abspath(model_path), tile)
+    with _SESS_LOCK:
+        d = _SESSIONS.get(key)
+        if d is None:
+            d = OnnxDenoiser(model_path, tile=tile)
+            _SESSIONS[key] = d
+        return d
+
+
+def _lum_transfer(f, out01, scale, smooth_chroma: bool):
+    """Transfere a LUMINÂNCIA do resultado da IA (RGB→RGB) para a COR original, via Lab.
+
+    Modelos RGB da Cosmic Clarity limpam/aguçam a estrutura mas mexem na saturação. Preservamos
+    a cor: L (luminância) = resultado da IA; a,b (croma) = imagem original. `smooth_chroma`
+    suaviza a croma (denoise: mata ruído de cor; sharpen: deixa False p/ não borrar cor).
+    Retorna array float na mesma escala de `f`."""
+    import cv2
+    ai_lum = np.clip(out01.mean(2) * 255, 0, 255).astype(np.uint8)
+    u8 = np.clip(f if scale == 255 else f * 255, 0, 255).astype(np.uint8)
+    lab = cv2.cvtColor(u8, cv2.COLOR_RGB2LAB)
+    lab[..., 0] = ai_lum
+    if smooth_chroma:
+        lab[..., 1] = cv2.medianBlur(lab[..., 1], 5)
+        lab[..., 2] = cv2.medianBlur(lab[..., 2], 5)
+    return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32) / 255.0 * scale
+
+
 def ai_denoise(image, model_path: str | None = None, strength: float = 1.0):
     """Denoise IA. Com modelo+onnxruntime → ONNX (TensorRT/CUDA); senão bilateral clássico.
 
@@ -118,19 +157,10 @@ def ai_denoise(image, model_path: str | None = None, strength: float = 1.0):
     den = None
     if model_path and HAS_ORT and os.path.exists(model_path):
         try:
-            d = OnnxDenoiser(model_path)
+            d = get_denoiser(model_path)
             if d.in_ch == 3 and is_color:
-                # o modelo limpa a ESTRUTURA mas dessatura → usamos a luminância limpa da IA +
-                # a cor original (croma suavizada p/ matar ruído de cor). Prática padrão em astro.
-                import cv2
-                out01 = d.run(f / scale)                     # RGB [0,1] -> RGB [0,1] (dessaturado)
-                ai_lum = np.clip(out01.mean(2) * 255, 0, 255).astype(np.uint8)
-                u8 = np.clip(f if scale == 255 else f * 255, 0, 255).astype(np.uint8)
-                lab = cv2.cvtColor(u8, cv2.COLOR_RGB2LAB)
-                lab[..., 0] = ai_lum                         # L = luminância limpa da IA
-                lab[..., 1] = cv2.medianBlur(lab[..., 1], 5)  # croma suavizada (tira ruído de cor)
-                lab[..., 2] = cv2.medianBlur(lab[..., 2], 5)
-                den = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32) / 255.0 * scale
+                out01 = d.run(f / scale)                     # RGB [0,1] -> RGB [0,1]
+                den = _lum_transfer(f, out01, scale, smooth_chroma=True)  # luminância IA + cor orig
             else:                                            # modelo 1 canal (luminância)
                 lum = f.mean(2) if is_color else f
                 lo, hi = np.percentile(lum, 0.5), np.percentile(lum, 99.9)
@@ -157,3 +187,47 @@ def ai_denoise(image, model_path: str | None = None, strength: float = 1.0):
 
     out = (1 - strength) * f + strength * den
     return out.astype(arr.dtype)
+
+
+def ai_sharpen(image, model_path: str | None = None, strength: float = 1.0):
+    """Aguçamento/Deconvolução IA (Cosmic Clarity SharpeningCNN → ONNX, TensorRT/CUDA na GPU).
+
+    Recupera detalhe fino (estrelas menores, estrutura de nebulosa/galáxia) desfeito pelo seeing —
+    o que uma deconvolução de Richardson-Lucy faz, mas aprendido. Aplica a luminância aguçada da
+    IA à cor original (sem borrar croma). Sem modelo → unsharp mask clássico. `strength` mistura 0..1.
+    """
+    arr = np.asarray(image)
+    if strength <= 0:
+        return arr
+    is_color = arr.ndim == 3
+    f = arr.astype(np.float32)
+    scale = 255.0 if f.max() > 1.5 else 1.0
+
+    den = None
+    if model_path and HAS_ORT and os.path.exists(model_path):
+        try:
+            d = get_denoiser(model_path)
+            if d.in_ch == 3 and is_color:
+                out01 = d.run(f / scale)
+                den = _lum_transfer(f, out01, scale, smooth_chroma=False)  # aguça L, mantém cor
+            else:                                            # modelo 1 canal
+                lum = f.mean(2) if is_color else f
+                lo, hi = np.percentile(lum, 0.5), np.percentile(lum, 99.9)
+                sh_l = d.run(np.clip((lum - lo) / max(hi - lo, 1e-6), 0, 1)) * max(hi - lo, 1e-6) + lo
+                if is_color:
+                    ratio = np.clip(sh_l / (lum + 1e-6), 0.3, 3.0)
+                    den = np.clip(f * ratio[..., None], 0, scale)
+                else:
+                    den = sh_l
+        except Exception:
+            den = None
+
+    if den is None:                                          # fallback: unsharp mask clássico
+        import cv2
+        u8 = np.clip(f if scale == 255 else f * 255, 0, 255).astype(np.uint8)
+        blur = cv2.GaussianBlur(u8, (0, 0), 1.4)
+        u8 = cv2.addWeighted(u8, 1.0 + 0.7 * strength, blur, -0.7 * strength, 0)
+        den = u8.astype(np.float32) / 255.0 * scale
+
+    out = (1 - strength) * f + strength * den
+    return np.clip(out, 0, scale).astype(arr.dtype)
