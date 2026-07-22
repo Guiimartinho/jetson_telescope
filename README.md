@@ -91,6 +91,7 @@ são armadilhas que travam meses sem serem o diferencial. Por isso:
 | [`docs/28-bringup-jetson.md`](docs/28-bringup-jetson.md) | ⭐ **Milestone E: bring-up na Jetson Orin — roda no Orin (GPU), painel/estúdio no celular, INDI real 4/4** |
 | [`docs/30-modo-planetario.md`](docs/30-modo-planetario.md) | ⭐ **Modo Sistema Solar (Lua/planetas/Sol): lucky imaging em GPU — grade→seleção→correlação de fase→stack→wavelets — `run_planetary.py`** |
 | [`docs/31-bringup-camera-controle.md`](docs/31-bringup-camera-controle.md) | ⭐ **Milestone F: como a Jetson recebe a imagem (USB3/MIPI→GPU) e controla montagem/foco p/ apontar — fluxograma + sequência F1–F6** |
+| [`docs/32-hardware-bom.md`](docs/32-hardware-bom.md) | ⭐ **BOM de hardware: OnStepX + OpenAstroMount (3D imprimível) + SV705 + ótica/foco/energia/cabos — o que imprimir e comprar** |
 | [`TASKS.md`](TASKS.md) | ⭐ **Plano de execução: Fase 1→4 + Milestones D/E/F (fechar software antes da câmera)** |
 
 ---
