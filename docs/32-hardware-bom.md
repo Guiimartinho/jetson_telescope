@@ -27,13 +27,28 @@ Conjunto RA + DEC + base polar + caixas de redução (gearbox) + suportes de mot
 - Material: **PETG** (mais rígido/estável que PLA para carga estrutural) ou PLA+.
 - Preenchimento ~40–50%, 3–4 perímetros. Pode **mandar imprimir já** — as STLs estão no repo.
 
-### A2. Eletrônica de controle (OnStepX)
-| Item | Recomendado | Qtd | Obs |
+### A2. Eletrônica de controle (OnStepX) — **placa escolhida: FYSETC E4** ✅
+
+**FYSETC E4** (validada 2026-07): ESP32-WROOM-32 (240MHz, 16MB, **WiFi+BT**) + **4× TMC2209 onboard**
+(UART, **2A** cada), entrada **12–24V**, CH340 USB, TF card, 3 endstops c/ sensorless. **Placa pronta,
+made in China (~US$30) — compra, não fabrica.** Bate todos os critérios (OnStepX/WiFi/TMC2209/≥2 eixos+foco/12V).
+
+| Item | Escolha | Qtd | Obs |
 |---|---|---|---|
-| Placa controladora | **ESP32 dedicada OnStep** (Instein PCB / MaxESP4) ou **FYSETC E4** (ESP32 + 4×TMC2209 + WiFi) | 1 | WiFi já resolve o link com a Jetson. **Confira o pinmap na OnStep wiki (Boards).** |
-| Drivers de passo | **TMC2209** (silencioso, UART) | 2–3 | RA + DEC (+ foco). Já vêm na FYSETC E4. |
-| Cabo USB / microSD | — | 1 | flash do firmware |
-| (opcional) GPS ou RTC | módulo GPS uBlox **ou** RTC DS3231 | 1 | tempo/local; ou a Jetson fornece a hora |
+| Placa controladora | **FYSETC E4** (ESP32 + 4×TMC2209 + WiFi) | 1 | X=RA, Y=DEC, Z/E=foco, +1 sobra. **Confirmar o pinmap "FYSETC E4" no Config do OnStepX** (versão X). |
+| Refrigeração dos drivers | dissipador + **fan 5V pequeno** | 1 | TMC2209 esquenta; nossa carga é leve, mas garante |
+| Cabo USB / microSD | — | 1 | flash do firmware (CH340) |
+| (opcional) GPS ou RTC | GPS uBlox **ou** RTC DS3231 | 1 | tempo/local; ou a Jetson fornece a hora |
+
+**Bônus da E4:** a saída de aquecedor (15A/12V) vira **resistência anti-orvalho**; os 3 endstops viram
+**fins de curso** dos eixos; StallGuard permite **homing sem sensor**.
+
+> **Por que uma placa separada e não a própria Jetson?** Motor de passo precisa de pulsos STEP com timing de
+> **microssegundos** (tempo real). O ESP32 é *bare-metal* com timers de hardware → pulso perfeito. A Jetson roda
+> **Linux (não tempo-real)** e fica ocupada com visão/GPU → geraria *jitter* de ms → tracking tremido/estrelas
+> alongadas. Divisão padrão (igual OctoPrint+Marlin na impressora 3D): **Jetson = cérebro** (visão, plate-solve,
+> decisão, INDI client) ⇄ WiFi/USB ⇄ **ESP32+OnStepX = tempo real** (pulsos). O ESP32 não é o gasto — é ~US$5–30
+> e dá o stack de montagem inteiro (goto/tracking/PEC/guiding/LX200) de graça. Ver docs/31.
 
 ### A3. Motores + transmissão
 | Item | Recomendado | Qtd |
