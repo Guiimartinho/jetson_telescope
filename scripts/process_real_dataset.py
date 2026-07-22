@@ -49,7 +49,7 @@ def _master(files, label):
     return m
 
 
-from src.gpu.calibration import remove_hot_pixels as _remove_hotpix   # noqa: E402
+from src.postproc.cosmic import clean_cosmics as _remove_hotpix   # noqa: E402 (astroscrappy+fallback)
 
 
 def _bin2(img, n):

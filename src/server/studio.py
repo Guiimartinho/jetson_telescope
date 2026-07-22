@@ -70,11 +70,20 @@ class Studio:
             self._prev[key] = prev
             return True
 
-    def render_jpeg(self, key, params: RenderParams, full=False, quality=90):
+    def render_jpeg(self, key, params: RenderParams, full=False, quality=90,
+                    starless=False, ai_denoise=0.0):
         if not self._ensure(key):
             return None
         base = self._full[key] if full else self._prev[key]
         rgb = render(base, params)
+        if starless:                                   # remove estrelas (StarNet / fallback)
+            from ..postproc.starless import remove_stars
+            rgb = remove_stars(rgb).astype(np.uint8)
+        if ai_denoise > 0:                             # denoise IA (ONNX se houver modelo; senão clássico)
+            import os
+            from ..postproc.ai_denoise import ai_denoise as _aid
+            rgb = _aid(rgb, model_path=os.environ.get("STUDIO_DENOISE_MODEL"),
+                       strength=float(ai_denoise)).astype(np.uint8)
         ok, buf = cv2.imencode(".jpg", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
                                [cv2.IMWRITE_JPEG_QUALITY, quality])
         return buf.tobytes() if ok else None
@@ -115,7 +124,10 @@ def _make_handler(studio: Studio):
                 else:
                     params = RenderParams.from_query(q)
                 full = u.path == "/download"
-                jpg = studio.render_jpeg(key, params, full=full, quality=95 if full else 88)
+                starless = str(q.get("starless", "")).lower() in ("1", "true", "on")
+                aid = float(q.get("ai_denoise", 0) or 0)
+                jpg = studio.render_jpeg(key, params, full=full, quality=95 if full else 88,
+                                         starless=starless, ai_denoise=aid)
                 if jpg is None:
                     self._send(404, "text/plain", b"alvo indisponivel")
                     return
@@ -216,11 +228,12 @@ const SL=[
  {k:'deconv',l:'Deconvolucao (detalhe)',min:0,max:20,step:1},
  {k:'denoise',l:'Denoise (croma)',min:0,max:1,step:.05},
  {k:'ldenoise',l:'Denoise (luminancia)',min:0,max:1,step:.05},
+ {k:'ai_denoise',l:'Denoise IA (ONNX/fallback)',min:0,max:1,step:.1},
  {k:'star_reduce',l:'Reduzir estrelas',min:0,max:1,step:.05},
  {k:'sharpen',l:'Nitidez',min:0,max:1,step:.02},
 ];
 const DEF={stretch:10,black:0,white:99.7,gamma:1,scnr:1,saturation:1.8,r_gain:1.1,g_gain:1,b_gain:1,
- deconv:0,denoise:.35,ldenoise:0,star_reduce:0,sharpen:.12,remove_grad:false};
+ deconv:0,denoise:.35,ldenoise:0,ai_denoise:0,star_reduce:0,sharpen:.12,remove_grad:false,starless:false};
 let P={...DEF}, target='', meta={}, timer=null;
 
 function build(presets){
@@ -236,7 +249,7 @@ function build(presets){
    r.value=P[s.k]; document.getElementById('v_'+s.k).textContent=(+P[s.k]).toFixed(2);
    r.oninput=()=>{P[s.k]=+r.value;document.getElementById('v_'+s.k).textContent=(+r.value).toFixed(2);draw();};
  }
- for(const [k,l] of [['remove_grad','Remover gradiente (extracao de fundo)']]){
+ for(const [k,l] of [['remove_grad','Remover gradiente (extracao de fundo)'],['starless','Remover estrelas (StarNet)']]){
    const t=document.createElement('label');t.className='tgl';
    t.innerHTML='<input type="checkbox" id="c_'+k+'"'+(P[k]?' checked':'')+'> '+l;
    a.appendChild(t);

@@ -7,6 +7,9 @@ scipy>=1.10             # autofoco (curve_fit), deconvolução (fftconvolve), cu
 astropy>=5.3           # FITS/WCS, tempo/coordenadas (visibilidade do catálogo)
 scikit-image>=0.20     # deconvolução/restauração; puxado também pelo astroalign
 pyongc>=0.6            # catálogo do céu (OpenNGC) — src/core/catalog.py
+astroscrappy>=1.1      # remoção de raios cósmicos/hot pixels (L.A.Cosmic) — postproc/cosmic.py
+onnxruntime>=1.16      # runner de denoise IA (astro-csbdeep/GraXpert→ONNX) — postproc/ai_denoise.py
+#   Jetson: use onnxruntime-gpu (EP TensorRT/CUDA). StarNet++ (opcional): baixar o binário do autor.
 
 # Reuso (opcional, recomendado) — registro robusto por triângulos de estrelas (MIT).
 # Se ausente, o registro cai para o método próprio (cv2). Ver src/gpu/registration.py
