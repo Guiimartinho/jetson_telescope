@@ -33,6 +33,14 @@ class IndiCameraSource(FrameSource):
         cli.get_properties(self.device_name)
         cli.connect_device(self.device_name, timeout=timeout)
         cli.wait_vector(self.device_name, "CCD_EXPOSURE", timeout=timeout)
+        # garante que a imagem vem para o CLIENTE (senão o driver salva em disco → BLOB não chega,
+        # e a exposição vai a Alert — visto no bring-up com o indi_simulator_ccd real).
+        try:
+            cli.wait_vector(self.device_name, "UPLOAD_MODE", timeout=2)
+            cli.send_switch(self.device_name, "UPLOAD_MODE", on="UPLOAD_CLIENT",
+                            off=["UPLOAD_LOCAL", "UPLOAD_BOTH"])
+        except Exception:
+            pass
         cli.enable_blob(self.device_name, "CCD1")           # sem isso o CCD não manda imagem
         if self.gain is not None and cli.get(self.device_name, "CCD_GAIN"):
             cli.send_number(self.device_name, "CCD_GAIN", {"GAIN": float(self.gain)})

@@ -67,10 +67,19 @@ class IndiFocuser(Focuser):
         v = self.client.value(self.device, self.VEC, self.ELEM)
         return int(round(v)) if v is not None else 0
 
-    def move_to(self, pos, timeout=60.0):
+    def move_to(self, pos, timeout=60.0, tol=2.0):
+        """Move e ESPERA a posição chegar no alvo. Não confia só no state 'Ok' (o driver move
+        gradual e o estado pode piscar Ok antes de ir a Busy — visto no bring-up com o sim real)."""
         self._ensure()
+        target = float(int(pos))
         self.client.send_number(self.device, self.VEC, {self.ELEM: int(pos)})
-        self.client.wait_state(self.device, self.VEC, "Ok", timeout=timeout)
+        import time
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            cur = self.client.value(self.device, self.VEC, self.ELEM)
+            if cur is not None and abs(cur - target) <= tol:
+                break
+            time.sleep(0.2)
         return self.position()
 
     def close(self):
