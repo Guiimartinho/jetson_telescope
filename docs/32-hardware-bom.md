@@ -4,25 +4,29 @@ Lista de materiais para o **protótipo de bancada** (de-riscar antes da versão 
 usuário: **OnStepX** (firmware) + câmera **Svbony SV705** (IMX585). Objetivo aqui: o que **imprimir** e o que
 **comprar**, separando o que já existe pronto (reuso) do que é específico do nosso telescópio.
 
-## Base escolhida: OnStepX + OpenAstroMount (OAM)
+## Base escolhida: OnStepX + OpenAstroExplorer (OAE)
 
-**OpenAstroMount (OAM)** — montagem equatorial **100% imprimível**, ambos os eixos por **correia (redução
-9:1 em dois estágios)**, payload **5+ kg**, precisão **0,5–0,7″ RMS**, roda **OnStep/OnStepX**. É exatamente o
-"reaproveitar as peças 3D": as STLs e a lista de ferragens já existem e são casadas entre si.
+**OpenAstroExplorer (OAE)** — montagem equatorial **compacta/portátil, 100% imprimível**, **v1.0 lançado
+(pronto pra construir)**. **RA por correia (mesma redução 9:1 em dois estágios do OAM); DEC por rosca sem-fim
+(worm) compacta.** Payload **5 kg**, precisão **0,6–0,9″ RMS** (PHD2), **3 kg** só o mount, **dobrável**, com
+**auto polar align** e anel de RA magnético destacável. Roda **OnStep/OnStepX**. É a forma **mais próxima da
+visão final (estilo DWARF)** — e não muda nossa eletrônica nem praticamente os motores.
 
-> **⚠️ Fonte-mestra das peças da montagem:** o OAM publica **duas planilhas** no repositório
-> `github.com/OpenAstroTech/OpenAstroMount` — **"Shopping List"** (parafusos, rolamentos, correias, polias,
-> motor, placa — com quantidades exatas) e **"Printed Parts List"** (todas as STLs). **Baixe as STLs de lá e
-> use a Shopping List como BOM-mestra da montagem** — ela é versionada junto com as peças. Abaixo dou a visão
-> geral + tudo que a planilha do OAM **não** cobre (é o que precisamos somar para o NOSSO telescópio).
+> **Por que OAE e não OAM/OAT:** OAT = rastreador (leve/impreciso demais); OAM = GEM maior (0,5–0,7″ RMS, mais
+> pesado); **OAE = compacto e portátil com o mesmo payload (5 kg) e precisão quase igual** → melhor encaixe no
+> objetivo. Trade-off mínimo: precisão um tiquinho menor e DEC por worm (um pouco mais de backlash que correia).
 
-OnStepX também roda **alt-az** — então a mesma eletrônica serve para a versão compacta (estilo DWARF) depois.
+> **⚠️ Fonte-mestra das peças da montagem:** o OAE publica no repositório
+> `github.com/OpenAstroTech/OpenAstroExplorer` (+ wiki OpenAstroTech) a **"Shopping List"** (parafusos,
+> rolamentos, correias, polias, worm, motores — quantidades exatas) e a **"Printed Parts List"** (todas as STLs).
+> **Baixe as STLs de lá e use a Shopping List como BOM-mestra da montagem** — versionada junto com as peças.
+> Abaixo: a visão geral + tudo que a planilha do OAE **não** cobre (o que somamos para o NOSSO telescópio).
 
 ---
 
-## PARTE A — A montagem (OAM) — imprima + compre pela planilha do OAM
+## PARTE A — A montagem (OAE) — imprima + compre pela planilha do OAE
 
-### A1. Peças 3D (imprimir) — do "Printed Parts List" do OAM
+### A1. Peças 3D (imprimir) — do "Printed Parts List" do OAE
 Conjunto RA + DEC + base polar + caixas de redução (gearbox) + suportes de motor + barra de contrapeso.
 - Material: **PETG** (mais rígido/estável que PLA para carga estrutural) ou PLA+.
 - Preenchimento ~40–50%, 3–4 perímetros. Pode **mandar imprimir já** — as STLs estão no repo.
@@ -50,20 +54,24 @@ made in China (~US$30) — compra, não fabrica.** Bate todos os critérios (OnS
 > decisão, INDI client) ⇄ WiFi/USB ⇄ **ESP32+OnStepX = tempo real** (pulsos). O ESP32 não é o gasto — é ~US$5–30
 > e dá o stack de montagem inteiro (goto/tracking/PEC/guiding/LX200) de graça. Ver docs/31.
 
-### A3. Motores + transmissão
-| Item | Recomendado | Qtd |
-|---|---|---|
-| Motor de passo eixos | **NEMA 17** 1,8° ~1,0–1,5 A (pancake serve) | 2 (RA, DEC) |
-| Correias/polias/idlers GT2 | **conforme a Shopping List do OAM** (redução 9:1) | — |
-| Rolamentos dos eixos | **tamanhos exatos na Shopping List do OAM** | — |
+### A3. Motores + transmissão (OAE: RA por correia 9:1, DEC por worm)
+| Item | Escolha | Qtd | Obs |
+|---|---|---|---|
+| Motor **RA** (correia 9:1) | **17HS4401** (NEMA 17, 1,8°, ~40 N·cm, 1,7 A, bipolar, eixo 5mm) | 1 | validado |
+| Motor **DEC** (worm) | **NEMA 17** — **confirmar no BOM do OAE** (worm pode usar NEMA 17 ou 14) | 1 | provável 17HS4401 também |
+| Correias/polias/idlers GT2 + worm/coroa | **conforme a Shopping List do OAE** | — | |
+| Rolamentos dos eixos | **tamanhos exatos na Shopping List do OAE** | — | |
 
-### A4. Ferragens (fasteners) — quantidades exatas na Shopping List do OAM
+> ⚠️ **Corrente dos NEMA 17 no OnStepX:** setar **~0,8–1,2 A** (não os 1,7 A cheios do 17HS4401) — a montagem
+> quase não puxa torque; assim roda **frio e silencioso** nos TMC2209 da E4.
+
+### A4. Ferragens (fasteners) — quantidades exatas na Shopping List do OAE
 - **Insertos térmicos de latão M3** (montagem em plástico impresso) + parafusos **M3/M4/M5**, porcas, arruelas.
 - Barra de contrapeso + **contrapeso** (equatorial precisa equilibrar).
 
 ---
 
-## PARTE B — O que a planilha do OAM NÃO cobre (nosso telescópio)
+## PARTE B — O que a planilha do OAE NÃO cobre (nosso telescópio)
 
 ### B1. Câmera + computação
 | Item | Escolha | Qtd | Obs |
@@ -80,9 +88,9 @@ A câmera **não** tem lente de telescópio. Precisa de um **objetivo** (é o "t
 - Escala resultante (IMX585 2,9 µm): 250 mm → ~2,4″/px; Lua ~780 px (ver docs/comparativo).
 
 ### B3. Foco motorizado (autofoco)
-| Item | Opção A (barato) | Opção B (pronto) |
+| Item | Opção A (barato) — **escolhida** | Opção B (pronto) |
 |---|---|---|
-| Motor de foco | **NEMA 14/17 + acoplador** no focalizador do OTA (OnStepX controla como eixo de foco) | **ZWO EAF** (USB, INDI pronto) |
+| Motor de foco | **35HS42** (NEMA 14 Kalatec — bipolar, 1,0 A, 20 N·cm, 1,8°, eixo 5mm) + acoplador/correia GT2 no focalizador → OnStepX controla no driver Z/E que sobra da E4 | **ZWO EAF** (USB, INDI pronto, ~US$150) |
 | Focalizador | mecânica do OTA (helicoidal/Crayford) | idem |
 
 ### B4. Energia
@@ -101,14 +109,14 @@ A câmera **não** tem lente de telescópio. Precisa de um **objetivo** (é o "t
 | Rede (opcional) | 1 | ou WiFi ESP32 ↔ Jetson |
 | Fio, termorretrátil, conectores, DC barrel, XT60, fusível | — | avulsos |
 
-### B6. Peças 3D custom (projetar — não vêm do OAM)
+### B6. Peças 3D custom (projetar — não vêm do OAE)
 - **Berço da Jetson** (dissipação/ventilação) acoplado à base.
 - **Suporte câmera + OTA** (alinhado ao eixo óptico).
 - **Caixa da eletrônica** (placa OnStep + buck).
 - **Braçadeiras de cabo**.
 
 ### B7. Base / tripé
-- **Tripé fotográfico robusto** (ou pier impresso + coluna) + **cunha/base de alinhamento polar** (o OAM tem a base polar).
+- **Tripé fotográfico robusto** (ou pier impresso + coluna) + **cunha/base de alinhamento polar** (o OAE tem a base polar).
 
 ---
 
@@ -117,9 +125,9 @@ OnStepX no ESP32 expõe **WiFi (protocolo LX200 por TCP)** ou **USB-serial** →
 (`indi_lx200`/`indi_onstep`) → o nosso `IndiMount`/`IndiFocuser` (já prontos e testados). **Zero software novo.**
 
 ## Ordem sugerida (compra/impressão)
-1. **Imprimir já** as STLs do OAM (PETG). ~1 rolo.
+1. **Imprimir já** as STLs do OAE (PETG). ~1 rolo.
 2. Comprar a **eletrônica** (placa OnStep ESP32 + TMC2209 + **NEMA 17 ×2**) + **kit de ferragens/correias/
-   rolamentos da Shopping List do OAM**.
+   rolamentos da Shopping List do OAE**.
 3. **Fonte 12 V + buck 5 V + cabos**.
 4. **OTA (objetivo)** + **foco motorizado** + **SV705** + cabo USB3.
 5. Peças 3D custom (berço Jetson / suporte câmera-OTA).
@@ -128,7 +136,7 @@ OnStepX no ESP32 expõe **WiFi (protocolo LX200 por TCP)** ou **USB-serial** →
 | Bloco | ~USD |
 |---|---|
 | Eletrônica OnStep + 2× NEMA 17 | 60–100 |
-| Ferragens + correias + rolamentos (OAM) | 40–70 |
+| Ferragens + correias + rolamentos (OAE) | 40–70 |
 | Fonte + buck + cabos | 25–45 |
 | Filamento (PETG) | ~20 |
 | **Subtotal montagem (sem ótica/câmera)** | **~150–250** |
@@ -137,7 +145,7 @@ OnStepX no ESP32 expõe **WiFi (protocolo LX200 por TCP)** ou **USB-serial** →
 | Foco (NEMA barato → ZWO EAF) | 15 – 150 |
 
 ## Decisões/verificações antes de comprar
-- **Placa OnStep:** confirmar na **OnStep wiki (Boards)** a que casa com o OAM + o pinmap (crítico).
+- **Placa OnStep:** confirmar na **OnStep wiki (Boards)** a que casa com o OAE + o pinmap (crítico).
 - **SV705 no aarch64:** validar suporte INDI/UVC no Orin **antes** (posso pesquisar) — se travar, plano B é ASI585.
 - **Objetivo (OTA):** definir focal/abertura (afeta escala e campo — ver o comparativo Lua).
-- **Quantidades exatas** (parafusos/rolamentos/correias): **sempre pela Shopping List do OAM** (versionada com as STLs).
+- **Quantidades exatas** (parafusos/rolamentos/correias): **sempre pela Shopping List do OAE** (versionada com as STLs).
