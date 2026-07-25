@@ -92,6 +92,7 @@ são armadilhas que travam meses sem serem o diferencial. Por isso:
 | [`docs/30-modo-planetario.md`](docs/30-modo-planetario.md) | ⭐ **Modo Sistema Solar (Lua/planetas/Sol): lucky imaging em GPU — grade→seleção→correlação de fase→stack→wavelets — `run_planetary.py`** |
 | [`docs/31-bringup-camera-controle.md`](docs/31-bringup-camera-controle.md) | ⭐ **Milestone F: como a Jetson recebe a imagem (USB3/MIPI→GPU) e controla montagem/foco p/ apontar — fluxograma + sequência F1–F6** |
 | [`docs/32-hardware-bom.md`](docs/32-hardware-bom.md) | ⭐ **BOM de hardware: OnStepX + FYSETC E4 + OpenAstroExplorer (OAE, 3D imprimível compacto) + SV705 + motores/ótica/foco/energia — o que imprimir e comprar** |
+| [`docs/33-console-campo.md`](docs/33-console-campo.md) | ⭐ **Console de campo (UI de produto Live/Atlas/Pro, estilo DWARF+ASIAIR): webpage no celular via WiFi, catálogo+telemetria reais — `run_console.py` (8080)** |
 | [`TASKS.md`](TASKS.md) | ⭐ **Plano de execução: Fase 1→4 + Milestones D/E/F (fechar software antes da câmera)** |
 
 ---
