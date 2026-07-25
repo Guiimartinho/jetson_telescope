@@ -46,5 +46,14 @@ py -3.11 -m pytest tests/test_console.py
 ```
 
 Testes (5, offline): estrutura do Atlas, histograma normalizado, render real de imagem, fallbacks. O
-catálogo cai numa lista estática se pyongc faltar (não quebra). É **conceito funcional** — foco/guiding são
-simulados até a montagem/câmera reais; o resto (catálogo, imagens, telemetria de stack, comandos) é real.
+catálogo cai numa lista estática se pyongc faltar (não quebra).
+
+## Design system (`ui_kit`) e "nada mockado"
+
+A UI usa o **`src/server/ui_kit.py`** — tema coerente + **ícones SVG desenhados à mão (NUNCA emoji)** e a
+logo (retículo + órbita). O mesmo kit será aplicado ao estúdio e ao painel. **Tudo funciona com dados/
+imagens REAIS dos nossos modelos:** nebulosa/galáxia = stacks; **planeta = lucky imaging** (`/image/@jupiter`);
+**Lua = foto real** realçada; **satélite = cena de rastreio** (rastro real); **autofoco = curva V real**
+(roda o `AutoFocuser`, `/api/focus`); **guiding = fluxo óptico real** (`OpticalFlowTracker` sobre a cena de
+satélite, resíduo após a deriva, `/api/guiding`); **histograma real**; telemetria+comandos via Controller.
+Foco/guiding rodam os ALGORITMOS de verdade (sobre céu simulado, até a câmera/montagem físicas).
