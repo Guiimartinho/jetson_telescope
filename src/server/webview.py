@@ -1,14 +1,16 @@
-"""Live view no navegador — stream MJPEG + estatísticas, SEM dependências extras.
+"""Painel de controle no navegador — stream MJPEG + estatísticas, SEM dependências extras.
 
-Usa apenas a stdlib (http.server). O orquestrador publica o frame empilhado atual no
-FrameHub; o navegador mostra `/stream.mjpg` (atualiza sozinho) e consulta `/stats`.
-UI = painel de controle (fase/estado, fila, SNR em destaque). Ver docs/03 e docs/16.
+Usa apenas a stdlib (http.server) e o design system `ui_kit` (tema coerente + ícones SVG, NUNCA emoji).
+O orquestrador publica o frame empilhado atual no FrameHub; o navegador mostra `/stream.mjpg` e consulta
+`/stats`. Roda todos os modos (empilhar, auto-find, agendador, mosaico, rastrear, noite). Ver docs/19, 33.
 """
 from __future__ import annotations
 import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from . import ui_kit as uik
 
 
 class FrameHub:
@@ -39,151 +41,119 @@ class FrameHub:
             return c
 
 
-_PAGE = b"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Telescopio Jetson - Painel</title>
-<style>
- :root{color-scheme:dark;
-   --bg:#070b14;--panel:#0f1626;--panel2:#0b1120;--line:#1e2842;--tx:#e9eefb;--mut:#7f8bab;
-   --cy:#2fe0c0;--am:#f5a94a;--gr:#46d17a;--red:#ff5d6c;--vi:#9aa0ff;--ha:#e5609d}
- *{box-sizing:border-box}
- body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;color:var(--tx);
-   background:radial-gradient(1200px 700px at 80% -10%,#111d33 0,transparent 60%),
-     radial-gradient(900px 600px at -10% 110%,#141026 0,transparent 55%),var(--bg)}
- .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
- header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-   padding:14px 20px;border-bottom:1px solid var(--line);background:rgba(9,13,22,.6);
-   backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
- .brand{font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:10px}
- .brand .b{font:600 10px ui-monospace,monospace;letter-spacing:.14em;color:#0a0f1a;
-   background:var(--cy);border-radius:5px;padding:2px 7px}
- .pill{font:700 12px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
-   color:#08110c;background:var(--mut);border-radius:99px;padding:6px 14px;transition:background .3s}
- .ctrl{display:flex;gap:10px;align-items:center}
- .btn{font:600 12px ui-monospace,monospace;color:var(--tx);background:var(--panel);
-   border:1px solid var(--line);border-radius:99px;padding:7px 14px;cursor:pointer}
- .btn:hover{border-color:var(--red);color:var(--red)}
- .cbar{display:flex;flex-direction:column;gap:10px;padding:14px 20px;
-   border-bottom:1px solid var(--line);background:var(--panel2)}
- .cgroup{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;
-   border:1px solid var(--line);border-left:3px solid var(--cy);border-radius:10px;
-   background:rgba(47,224,192,.04)}
- .cgroup.real{border-left-color:var(--gr);background:rgba(70,209,122,.05)}
- .cglab{font:700 10px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;
-   color:var(--cy);margin-right:4px}
- .cgroup.real .cglab{color:var(--gr)}
- .cbar select{background:var(--panel);color:var(--tx);border:1px solid var(--line);
-   border-radius:8px;padding:6px 10px;font:600 12px ui-monospace,monospace}
- .cbtn{font:600 12px ui-monospace,monospace;color:#08110c;background:var(--cy);border:0;
-   border-radius:8px;padding:8px 12px;cursor:pointer}
- .cgroup.real .cbtn{background:var(--gr)}
- .cbtn:hover{filter:brightness(1.12)}
- .strip{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:12px 20px;
-   border-bottom:1px solid var(--line);background:var(--panel2)}
- .strip .phase{font:600 12px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
- .strip .phase b{color:var(--tx)}
- .q{display:flex;align-items:center;gap:10px;margin-left:auto}
- .qbar{width:180px;height:8px;border-radius:99px;background:#0a1020;border:1px solid var(--line);overflow:hidden}
- .qfill{height:100%;width:0;background:linear-gradient(90deg,var(--vi),var(--cy));transition:width .5s}
- .qtxt{font:600 12px ui-monospace,monospace;color:var(--mut)}
- main{display:grid;grid-template-columns:1fr 300px;gap:18px;padding:18px;max-width:1200px;margin:0 auto}
- .view{position:relative;background:#000;border:1px solid var(--line);border-radius:16px;overflow:hidden;
-   box-shadow:0 20px 60px rgba(0,0,0,.5)}
- .view img{width:100%;display:block;min-height:220px}
- .live{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:7px;
-   font:700 11px ui-monospace,monospace;letter-spacing:.14em;color:#fff;
-   background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:5px 11px}
- .live .dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
- @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
- @media (prefers-reduced-motion:reduce){.live .dot{animation:none}}
- aside{display:flex;flex-direction:column;gap:12px}
- .hero{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
-   border-radius:16px;padding:18px 20px}
- .hero .k{font:600 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
- .hero .v{font:800 2.6rem ui-monospace,monospace;color:var(--gr);font-variant-numeric:tabular-nums;line-height:1.1}
- .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
- .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
- .stat .k{font:600 10px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
- .stat .v{font:700 1.6rem ui-monospace,monospace;color:var(--tx);font-variant-numeric:tabular-nums}
- .stat.ok .v{color:var(--cy)} .stat.warn .v{color:var(--am)}
- .foc{display:flex;justify-content:space-between;align-items:center;background:var(--panel);
-   border:1px solid var(--line);border-radius:14px;padding:12px 15px;
-   font:600 12px ui-monospace,monospace;color:var(--mut)}
- .foc b{color:var(--tx);font-size:1.05rem}
- footer{color:var(--mut);text-align:center;padding:18px;font:600 11px ui-monospace,monospace;letter-spacing:.1em}
- @media (max-width:760px){main{grid-template-columns:1fr}.qbar{width:120px}}
-</style></head><body>
-<header>
- <div class="brand"><span class="b">&#x1F52D; JETSON</span> Telescopio Robotico</div>
- <div class="ctrl">
-   <button class="btn" onclick="fetch('/cmd/stop')" title="Encerrar a sessao">&#9209; Parar</button>
-   <div class="pill" id="pill">-</div>
- </div>
-</header>
-<div class="strip">
- <div class="phase">FASE: <b id="phase">-</b></div>
- <div class="q" id="qwrap" style="display:none">
-   <div class="qbar"><div class="qfill" id="qfill"></div></div><span class="qtxt" id="qtxt"></span>
- </div>
- <div class="phase" style="margin-left:auto" id="bwrap">BACKEND: <b id="backend">-</b></div>
-</div>
-<div class="cbar">
- <div class="cgroup">
-   <span class="cglab">Simulador &middot; ceu de teste</span>
-   <select id="tgt"><option>M31</option><option>M42</option><option>M45</option></select>
-   <button class="cbtn" onclick="go('goto')" title="Aponta em RA/DEC: slew->solve->sync">GOTO (RA/DEC)</button>
-   <button class="cbtn" onclick="go('stack')">Empilhar</button>
-   <button class="cbtn" onclick="go('autofind')">Auto-find</button>
-   <button class="cbtn" onclick="cmd('start:scheduler')">Agendador</button>
-   <button class="cbtn" onclick="go('mosaic')">Mosaico</button>
-   <button class="cbtn" onclick="cmd('start:tracking')">Rastrear</button>
-   <button class="cbtn" onclick="cmd('start:night')">Noite</button>
- </div>
- <div class="cgroup real">
-   <span class="cglab">Foto real &middot; nao usa o seletor acima</span>
-   <button class="cbtn" onclick="cmd('start:realdata')" title="Empilha uma FOTO REAL do aglomerado M67">Dados reais (M67)</button>
- </div>
+_PANEL_CSS = """
+#page{max-width:1180px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 20px;
+  border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(6,8,14,.85);backdrop-filter:blur(8px);z-index:5}
+header .r{display:flex;align-items:center;gap:12px}
+.pill{font:700 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#04120e;background:var(--mut);
+  border-radius:99px;padding:6px 15px;transition:background .3s}
+.strip{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 20px;border-bottom:1px solid var(--line);background:var(--surf2)}
+.strip .ph{font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}.strip .ph b{color:var(--tx)}
+.q{display:flex;align-items:center;gap:10px;margin-left:auto}
+.qbar{width:170px;height:8px;border-radius:99px;background:var(--surf);border:1px solid var(--line);overflow:hidden}
+.qfill{height:100%;width:0;background:linear-gradient(90deg,var(--vi),var(--ac));transition:width .5s}
+.qtxt{font:600 12px var(--mono);color:var(--mut)}
+.ctrl{padding:16px 20px;display:flex;flex-direction:column;gap:11px}
+.cg{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:13px 15px;border:1px solid var(--line);
+  border-left:3px solid var(--ac);border-radius:var(--r);background:var(--surf)}
+.cg.real{border-left-color:var(--gr)}
+.cg .t{font:700 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin-right:4px}.cg.real .t{color:var(--gr)}
+select{background:var(--elev);color:var(--tx);border:1px solid var(--line);border-radius:var(--r2);padding:9px 12px;font:600 13px var(--mono)}
+.btn svg.ic{width:17px;height:17px}
+.cg.real .btn:hover{border-color:var(--gr)}
+main{display:grid;grid-template-columns:1fr 320px;gap:18px;padding:0 20px 30px}
+@media(max-width:820px){main{grid-template-columns:1fr}.qbar{width:120px}}
+.view{position:relative;overflow:hidden;background:#000}.view img{width:100%;display:block;min-height:240px}
+.livebadge{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:7px;font:700 11px var(--mono);
+  letter-spacing:.14em;background:rgba(4,7,14,.55);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+.livebadge .d{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:pl 1.4s infinite}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.livebadge .d{animation:none}}
+aside{display:flex;flex-direction:column;gap:12px}
+.hero{padding:18px 20px}.hero .k{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.hero .v{font:800 2.7rem var(--mono);color:var(--gr);font-variant-numeric:tabular-nums;line-height:1.1}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{padding:13px 15px}.stat .k{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.stat .v{font:700 1.55rem var(--mono);color:var(--tx);font-variant-numeric:tabular-nums}.stat.ok .v{color:var(--ac)}.stat.warn .v{color:var(--warn)}
+.foc{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;font:600 12px var(--mono);color:var(--mut)}
+.foc b{color:var(--tx);font-size:1.05rem}
+footer{color:var(--dim);text-align:center;padding:16px;font:600 10px var(--mono);letter-spacing:.14em}
+"""
+
+
+def _modebtns():
+    b = [("goto", "reticle", "GOTO (RA/DEC)"), ("stack", "layers", "Empilhar"), ("autofind", "search", "Auto-find")]
+    c = [("scheduler", "list", "Agendador"), ("mosaic", "grid", "Mosaico"),
+         ("tracking", "satellite", "Rastrear"), ("night", "moon", "Noite")]
+    def mk(mode, ic, lab, use_go):
+        call = f"go('{mode}')" if use_go else f"cmd('start:{mode}')"
+        return f'<button class="btn" onclick="{call}">{uik.icon(ic, 17)}{lab}</button>'
+    h = mk("goto", "reticle", "GOTO (RA/DEC)", True) + mk("stack", "layers", "Empilhar", True) \
+        + mk("autofind", "search", "Auto-find", True)
+    for mode, ic, lab in c:
+        h += mk(mode, ic, lab, False)
+    return h
+
+
+_TEMPLATE = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#04060c">
+<title>Jetson Telescopio · Painel</title><style>__CSS__</style></head><body><div id="page">
+<header>__BRAND__<div class="r"><div class="pill" id="pill">—</div>
+  <button class="btn" onclick="cmd('stop')">__IC_STOP__ Parar</button></div></header>
+<div class="strip"><div class="ph">FASE: <b id="phase">—</b></div>
+  <div class="ph">BACKEND: <b id="backend">—</b></div>
+  <div class="q" id="qwrap" style="display:none"><div class="qbar"><div class="qfill" id="qfill"></div></div><span class="qtxt" id="qtxt"></span></div></div>
+<div class="ctrl">
+  <div class="cg"><span class="t">Simulador · céu de teste</span>
+    <select id="tgt"><option>M31</option><option>M42</option><option>M45</option></select>__MODEBTNS__</div>
+  <div class="cg real"><span class="t">Foto real · dado astronômico</span>
+    <button class="btn" onclick="cmd('start:realdata')">__IC_CAM__ Dados reais (M67)</button></div>
 </div>
 <main>
- <section class="view">
-   <div class="live"><span class="dot"></span>AO VIVO</div>
-   <img src="/stream.mjpg" alt="stack ao vivo">
- </section>
- <aside>
-   <div class="hero"><div class="k">Ganho de SNR</div><div class="v" id="snr">-</div></div>
-   <div class="grid">
-     <div class="stat"><div class="k">FWHM (px)</div><div class="v" id="fwhm">-</div></div>
-     <div class="stat"><div class="k">Erro apont.</div><div class="v" id="err">-</div></div>
-     <div class="stat ok"><div class="k">Empilhados</div><div class="v" id="acc">0</div></div>
-     <div class="stat warn"><div class="k">Rejeitados</div><div class="v" id="rej">0</div></div>
-   </div>
-   <div class="foc"><span>FOCALIZADOR</span><b id="focus">-</b></div>
- </aside>
+  <section class="card view"><div class="livebadge"><span class="d"></span>AO VIVO</div><img src="/stream.mjpg" alt="stack ao vivo"></section>
+  <aside>
+    <div class="card hero"><div class="k">Ganho de SNR</div><div class="v" id="snr">—</div></div>
+    <div class="sg">
+      <div class="card stat"><div class="k">FWHM (px)</div><div class="v" id="fwhm">—</div></div>
+      <div class="card stat"><div class="k">Erro apont.</div><div class="v" id="err">—</div></div>
+      <div class="card stat ok"><div class="k">Empilhados</div><div class="v" id="acc">0</div></div>
+      <div class="card stat warn"><div class="k">Rejeitados</div><div class="v" id="rej">0</div></div>
+    </div>
+    <div class="card foc"><span>FOCALIZADOR</span><b id="focus">—</b></div>
+  </aside>
 </main>
-<footer>TELESCOPIO JETSON &middot; painel ao vivo</footer>
+<footer>JETSON TELESCOPIO · PAINEL DE CONTROLE</footer></div>
 <script>
- function cmd(x){fetch('/cmd/'+x);}
- function go(m){cmd('start:'+m+':'+document.getElementById('tgt').value);}
- const COL={IDLE:'#7f8bab',SLEWING:'#2fe0c0',SOLVING:'#2fe0c0',FOCUSING:'#f5a94a',
-   STACKING:'#46d17a',SCHEDULING:'#9aa0ff',TRACKING:'#e5609d',ERROR:'#ff5d6c',STOPPED:'#7f8bab'};
- async function poll(){try{const s=await(await fetch('/stats')).json();
-   const p=document.getElementById('pill');
-   p.textContent=s.phase||'-'; p.style.background=COL[s.state]||'#7f8bab';
-   document.getElementById('phase').textContent=(s.phase||'-')+(s.target?(' \\u00b7 '+s.target):'');
-   document.getElementById('backend').textContent=((s.backend||'').indexOf('GPU')>=0)?'GPU (CuPy)':'CPU (NumPy)';
-   document.getElementById('snr').textContent=s.snr?(s.snr.toFixed(2)+'x'):'-';
-   document.getElementById('fwhm').textContent=s.fwhm?s.fwhm.toFixed(2):'-';
-   document.getElementById('err').textContent=(s.error_px||s.error_px===0)?(s.error_px.toFixed(1)+' '+(s.err_unit||'px')):'-';
-   document.getElementById('acc').textContent=s.accepted||0;
-   document.getElementById('rej').textContent=s.rejected||0;
-   document.getElementById('focus').textContent=s.focus_pos||'-';
-   const qt=s.queue_total||0,qd=s.queue_done||0;
-   document.getElementById('qwrap').style.display=qt?'flex':'none';
-   document.getElementById('qfill').style.width=qt?((qd/qt*100)+'%'):'0%';
-   document.getElementById('qtxt').textContent=qt?(qd+'/'+qt+' alvos'):'';
- }catch(e){}}
- setInterval(poll,700);poll();
+function cmd(x){fetch('/cmd/'+x);}
+function go(m){cmd('start:'+m+':'+document.getElementById('tgt').value);}
+const COL={IDLE:'#8492b0',SLEWING:'#33ddc4',SOLVING:'#33ddc4',FOCUSING:'#f5b95c',STACKING:'#49d17e',
+  SCHEDULING:'#9aa2ff',TRACKING:'#f5b95c',ERROR:'#ff5d6c',STOPPED:'#8492b0'};
+async function poll(){try{const s=await(await fetch('/stats')).json();const p=document.getElementById('pill');
+  p.textContent=s.phase||'—';p.style.background=COL[s.state]||'#8492b0';
+  document.getElementById('phase').textContent=(s.phase||'—')+(s.target?(' · '+s.target):'');
+  document.getElementById('backend').textContent=((s.backend||'').indexOf('GPU')>=0)?'GPU (CuPy)':'CPU (NumPy)';
+  document.getElementById('snr').textContent=s.snr?(s.snr.toFixed(2)+'x'):'—';
+  document.getElementById('fwhm').textContent=s.fwhm?s.fwhm.toFixed(2):'—';
+  document.getElementById('err').textContent=(s.error_px||s.error_px===0)?(s.error_px.toFixed(1)+' '+(s.err_unit||'px')):'—';
+  document.getElementById('acc').textContent=s.accepted||0;document.getElementById('rej').textContent=s.rejected||0;
+  document.getElementById('focus').textContent=s.focus_pos||'—';
+  const qt=s.queue_total||0,qd=s.queue_done||0;document.getElementById('qwrap').style.display=qt?'flex':'none';
+  document.getElementById('qfill').style.width=qt?((qd/qt*100)+'%'):'0%';document.getElementById('qtxt').textContent=qt?(qd+'/'+qt+' alvos'):'';
+}catch(e){}}
+setInterval(poll,700);poll();
 </script></body></html>"""
+
+
+def _build_page():
+    return (_TEMPLATE
+            .replace("__CSS__", uik.css() + _PANEL_CSS)
+            .replace("__BRAND__", uik.brand("PAINEL"))
+            .replace("__IC_STOP__", uik.icon("power", 16))
+            .replace("__IC_CAM__", uik.icon("camera", 17))
+            .replace("__MODEBTNS__", _modebtns())).encode("utf-8")
+
+
+_PAGE = _build_page()
 
 
 def _make_handler(hub: FrameHub, on_command=None):

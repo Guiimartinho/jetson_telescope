@@ -104,6 +104,21 @@ _IC = {
     "target": '<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="3.4"/>',
     # alerta/parar redondo
     "power": '<path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/>',
+    # empilhar (camadas)
+    "layers": '<path d="M12 3 3 7.7l9 4.7 9-4.7z"/><path d="M3 12.2l9 4.7 9-4.7"/><path d="M3 16.5l9 4.7 9-4.7"/>',
+    # agenda (lista)
+    "list": '<path d="M8.5 6h12.5M8.5 12h12.5M8.5 18h12.5"/><circle class="f" cx="4" cy="6" r="1.4"/>'
+            '<circle class="f" cx="4" cy="12" r="1.4"/><circle class="f" cx="4" cy="18" r="1.4"/>',
+    # mosaico (grade)
+    "grid": '<rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/>'
+            '<rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.2"/>',
+    # download / alta resolução
+    "download": '<path d="M12 3v11M7.5 10 12 14.5 16.5 10"/><path d="M4 20h16"/>',
+    # olho / live
+    "eye": '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+    # câmera / captura real
+    "camera": '<path d="M4 8.5a2 2 0 0 1 2-2h1.6l1-1.6h4.8l1 1.6H18a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>'
+              '<circle cx="12" cy="12.3" r="3.3"/>',
 }
 
 # Logo do produto: retículo + órbita + planeta + satélite (mira + órbitas = a essência).

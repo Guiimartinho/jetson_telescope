@@ -277,8 +277,8 @@ _PAGE = b"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Telescopio Jetson - Estudio</title>
 <style>
- :root{color-scheme:dark;--bg:#05070d;--pan:#0e1524;--pan2:#0a1020;--line:#1d2740;--tx:#eaf0fb;
-   --mut:#8090b0;--cy:#31e0c4;--gr:#4cd884;--am:#f6b45a;--vi:#9aa2ff}
+ :root{color-scheme:dark;--bg:#04060c;--pan:#0a0f1b;--pan2:#0d1526;--line:rgba(150,172,214,.13);--tx:#e9eefb;
+   --mut:#8492b0;--cy:#33ddc4;--gr:#49d17e;--am:#f5b95c;--vi:#9aa2ff}
  *{box-sizing:border-box} html,body{height:100%}
  body{margin:0;font:14px/1.5 system-ui,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg);
    display:flex;flex-direction:column;overflow:hidden}
@@ -320,10 +320,10 @@ _PAGE = b"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
  @media(max-width:760px){main{flex-direction:column}aside{width:100%;border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <header>
- <div class="brand"><span class="b">JETSON</span> Estudio</div>
+ <div class="brand"><svg viewBox="0 0 32 32" width="24" height="24" fill="none" stroke="#33ddc4" stroke-width="1.7" stroke-linecap="round" style="vertical-align:-5px"><circle cx="16" cy="16" r="4.2"/><ellipse cx="16" cy="16" rx="13" ry="6.4" transform="rotate(-24 16 16)" opacity=".85"/><path d="M16 3v3.4M16 25.6V29M3 16h3.4M25.6 16H29" opacity=".9"/><circle cx="26.4" cy="10" r="1.5" fill="#33ddc4" stroke="none"/></svg> JETSON <span style="color:var(--mut);font:600 9px ui-monospace,monospace;letter-spacing:.2em">ESTUDIO</span></div>
  <select id="target" title="Alvo"></select>
  <div class="presets" id="presets"></div>
- <button class="dl" onclick="dl()">&#8681; Alta resolucao</button>
+ <button class="dl" onclick="dl()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3v11M7.5 10 12 14.5 16.5 10"/><path d="M4 20h16"/></svg> Alta resolucao</button>
 </header>
 <main>
  <div class="view">
