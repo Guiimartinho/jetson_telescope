@@ -27,8 +27,10 @@ def test_visible_targets_structure():
     for t in ts:                                          # contrato de cada alvo
         assert {"desig", "name", "cat", "mag", "alt", "visible", "img"} <= set(t)
     by = {t["desig"]: t for t in ts}
-    assert by["M8"]["img"] == "lagoon_trifid"             # os 3 reais têm imagem
-    assert by["M31"]["img"] is None                       # os demais não (ainda)
+    assert by["M8"]["img"] == "lagoon_trifid"             # stack real
+    assert by["Júpiter"]["img"] == "@jupiter"             # planeta (gerado dos modelos)
+    m31 = by["M31"]["img"]                                # DSO: None OU foto do céu (@sky:) se baixada
+    assert m31 is None or m31.startswith("@sky:")
 
 
 def test_console_renders_real_image(tmp_path, monkeypatch):

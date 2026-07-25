@@ -13,7 +13,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 
 import numpy as np
 import cv2
@@ -63,6 +63,8 @@ def visible_targets(when=None, site=DEFAULT_SITE):
                 alt = float(_cat.altitude_deg(obj, lat, lon, when))
             except Exception:
                 alt = None
+        if img is None and os.path.exists(f"data/sky_{desig}.jpg"):
+            img = "@sky:" + desig                       # foto real do céu (DSS) p/ este DSO
         out.append({"desig": desig, "name": (obj.common if (obj and obj.common) else desig),
                     "cat": cat, "mag": (round(obj.mag, 1) if (obj and obj.mag is not None) else None),
                     "alt": (round(alt) if alt is not None else None),
@@ -116,6 +118,15 @@ def _planetary(kind):
     res = lucky_stack(sim.frames(120), keep=0.18, sharpen=DEFAULT_WEIGHTS)
     rgb = np.clip(res.image, 0, 255).astype(np.uint8)
     return (_encode(rgb, 88, 820), _encode(rgb, 82, 260), histogram_bins(rgb))
+
+
+def _sky_bundle(desig):
+    """Foto REAL do céu (DSS2 color, baixada p/ data/sky_<desig>.jpg) — p/ DSO sem stack próprio."""
+    p = f"data/sky_{desig}.jpg"
+    if not os.path.exists(p):
+        return None
+    rgb = cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2RGB)
+    return (_encode(rgb, 88, 900), _encode(rgb, 82, 260), histogram_bins(rgb))
 
 
 def _moon_img():
@@ -220,6 +231,8 @@ class Console:
             return _cached("moon", _moon_img)
         if key == "@iss":
             return _cached("sat", _satellite)
+        if key.startswith("@sky:"):
+            return _cached(key, lambda: _sky_bundle(key[5:]))
         return self._stack(key)
 
     def image_jpeg(self, key, thumb=False):
@@ -274,7 +287,7 @@ def _make_handler(con: Console):
             elif p == "/api/guiding":
                 self._send(200, "application/json", json.dumps(guiding_series()).encode())
             elif p.startswith("/image/") or p.startswith("/thumb/"):
-                key = p.split("/", 2)[2]
+                key = unquote(p.split("/", 2)[2])
                 jpg = con.image_jpeg(key, thumb=p.startswith("/thumb/"))
                 self._send(200, "image/jpeg", jpg, {"Cache-Control": "max-age=60"}) if jpg \
                     else self._send(404, "text/plain", b"sem imagem")
