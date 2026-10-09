@@ -11,6 +11,18 @@ def test_controller_builds_world():
     assert c.session.mount is c.mount and c.session.filterwheel is not None
 
 
+def test_hub_has_state_and_real_backend_before_any_mode_runs():
+    """Regressão: parado, o hub ficava vazio e as UIs mostravam "CPU" por falta do campo,
+    mesmo com o pipeline em GPU. O estado inicial (IDLE + backend real) sai na criação."""
+    from src.backend import backend_name
+    from src.server.webview import FrameHub
+    hub = FrameHub()
+    Controller(SessionConfig(width=200, height=150, web=False), hub=hub)
+    _, stats = hub.get()
+    assert stats["state"] == "IDLE"
+    assert stats["backend"] == backend_name()
+
+
 def test_controller_stop_command():
     c = Controller(SessionConfig(width=200, height=150, web=False))
     c.session.stop = False

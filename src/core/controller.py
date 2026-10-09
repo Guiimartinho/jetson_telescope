@@ -32,6 +32,9 @@ class Controller:
         self.focuser = SimFocuser(position=4200, best=6300)
         self.session = Session(cfg, hub=hub, mount=self.mount, focuser=self.focuser,
                                solver=SimSolver(self.mount), filterwheel=SimFilterWheel())
+        # Publica o estado inicial (IDLE + backend real). Sem isso o hub fica vazio até o
+        # primeiro modo rodar, e as UIs caem no padrão "CPU" com o pipeline em GPU.
+        self.session._publish()
         # RA/DEC reais (graus) dos alvos, p/ o auto-find celeste (modo goto — T16)
         self.radec = {"M31": (10.68, 41.27), "M42": (83.82, -5.39), "M45": (56.87, 24.10)}
         self._q, self._lock, self._worker = [], threading.Lock(), None
