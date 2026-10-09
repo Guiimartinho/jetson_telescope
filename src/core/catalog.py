@@ -161,9 +161,48 @@ def framable(objects, rig: Rig = DEFAULT_RIG, min_frac: float = 0.03, max_frac: 
     return out
 
 
+_ASTROPY_OFFLINE = False
+
+
+def configure_astropy_offline() -> bool:
+    """Desliga o download automático de tabelas IERS do astropy. Idempotente.
+
+    O telescópio opera em campo SEM internet (docs/33). Na primeira transformação de
+    coordenada o astropy tenta BAIXAR a tabela IERS mais recente; medido no Orin, isso
+    custou ~70 s do arranque do Atlas (e em campo vira timeout de DNS/TCP a cada boot).
+
+    Desligar o download exige DUAS travas, senão o cálculo passa a levantar exceção (é o que
+    o teste de regressão pega):
+      * `auto_download=False`  — não sai para a rede; usa a tabela embutida;
+      * `auto_max_age=None`    — aceita a tabela embutida mesmo "velha". Sem isto o astropy
+        levanta `ValueError: interpolating from IERS_Auto using predictive values that are
+        more than 30.0 days old` — exatamente o caso do Orin, cujo log já acusava
+        `IERSStaleWarning`. É a saída recomendada pelo próprio astropy para uso offline.
+
+    A perda de precisão é de milissegundos de arco (orientação da Terra); filtramos
+    visibilidade em GRAUS. Ver docs/34.
+    """
+    global _ASTROPY_OFFLINE
+    if _ASTROPY_OFFLINE:
+        return True
+    try:
+        from astropy.utils import iers
+    except Exception:
+        return False
+    iers.conf.auto_download = False
+    iers.conf.auto_max_age = None                     # aceita a tabela embutida "velha"
+    try:
+        iers.conf.iers_degraded_accuracy = "ignore"   # astropy >= 5.1 (datas fora da cobertura)
+    except Exception:
+        pass
+    _ASTROPY_OFFLINE = True
+    return True
+
+
 def altitude_deg(obj: SkyObject, lat: float, lon: float, when) -> float:
     """Altitude do objeto (graus) para um observador (lat, lon) num instante `when` (astropy Time).
     >0 acima do horizonte. Usa astropy (reuso)."""
+    configure_astropy_offline()          # nunca sair para a internet no meio do campo
     from astropy.coordinates import EarthLocation, SkyCoord, AltAz
     import astropy.units as u
     loc = EarthLocation(lat=lat * u.deg, lon=lon * u.deg)

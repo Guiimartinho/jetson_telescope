@@ -72,6 +72,26 @@ def visible_targets(when=None, site=DEFAULT_SITE):
     return out
 
 
+def warm_cache(site=DEFAULT_SITE) -> bool:
+    """Pré-aquece o que deixa a PRIMEIRA abertura do Atlas lenta. Nunca levanta.
+
+    Medido no Orin: a 1ª chamada de `/api/targets` levava **78,8 s** (a 2ª, 0,27 s) — ~70 s de
+    tentativa de download IERS do astropy + 6,6 s de carga do catálogo OpenNGC (12.014 objetos)
+    + 1,7 s da 1ª transformação de coordenada. No celular isso lê como "travou". Rodando este
+    aquecimento numa thread no arranque do serviço, a UI de campo abre instantânea. Ver docs/34.
+    """
+    if _cat is None:
+        return False
+    try:
+        _cat.configure_astropy_offline()
+        objs = _cat.load()                       # OpenNGC: caro só na 1ª vez (cache no módulo)
+        if objs:                                 # 1ª transformação: monta os frames do astropy
+            _cat.altitude_deg(objs[0], site[0], site[1], datetime.now(timezone.utc))
+        return True
+    except Exception:                            # sem pyongc/astropy o console segue no fallback
+        return False
+
+
 def histogram_bins(rgb, n=40):
     """Histograma de luminância (n bins, normalizado 0..1)."""
     a = np.asarray(rgb)
@@ -327,6 +347,8 @@ class ConsoleServer:
         self.httpd.serve_forever()
 
     def start(self):
+        # aquece catálogo + astropy em paralelo: o Atlas é a 1ª aba que o usuário abre no campo
+        threading.Thread(target=warm_cache, args=(self.console.site,), daemon=True).start()
         threading.Thread(target=self.serve_forever, daemon=True).start()
 
     def stop(self):
