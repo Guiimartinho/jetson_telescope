@@ -70,6 +70,22 @@ def test_warm_cache_leaves_astropy_offline():
     assert iers.conf.auto_download is False
 
 
+def test_state_reports_simulated_mount_by_default():
+    """Sem link real (PC de dev, CI) a UI diz que a montagem é a simulada."""
+    assert Console(FrameHub()).state()["mount"] == {"connected": False, "source": "sim"}
+
+
+def test_state_reports_the_real_mount_link():
+    """Com o link real ligado, a UI recebe o estado DELE: conectada ou não, posição, motivo."""
+    class Link:
+        def status(self):
+            return {"connected": True, "ra_deg": 191.55, "dec_deg": 90.0, "error": None}
+
+    st = Console(FrameHub(), mount_link=Link()).state()
+    assert st["mount"]["source"] == "indi" and st["mount"]["connected"] is True
+    assert st["mount"]["dec_deg"] == 90.0
+
+
 def test_console_missing_image_none():
     con = Console(FrameHub())
     assert con.image_jpeg("nao_existe") is None

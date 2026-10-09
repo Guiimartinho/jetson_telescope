@@ -227,8 +227,9 @@ def guiding_series():
 
 
 class Console:
-    def __init__(self, hub: FrameHub, on_command=None, site=DEFAULT_SITE):
+    def __init__(self, hub: FrameHub, on_command=None, site=DEFAULT_SITE, mount_link=None):
         self.hub, self.on_command, self.site = hub, on_command, site
+        self.mount_link = mount_link          # link automático com a montagem real (ou None = sim)
         self._img = {}
         self._lock = threading.Lock()
 
@@ -273,6 +274,9 @@ class Console:
 
     def state(self):
         _, st = self.hub.get()
+        # a UI diz qual montagem está valendo: a real (link INDI, conectada ou não) ou a simulada
+        st["mount"] = (dict(self.mount_link.status(), source="indi") if self.mount_link
+                       else {"connected": False, "source": "sim"})
         return st
 
 
@@ -337,8 +341,9 @@ def _make_handler(con: Console):
 
 
 class ConsoleServer:
-    def __init__(self, hub: FrameHub, host="0.0.0.0", port=8080, on_command=None, site=DEFAULT_SITE):
-        self.console = Console(hub, on_command=on_command, site=site)
+    def __init__(self, hub: FrameHub, host="0.0.0.0", port=8080, on_command=None, site=DEFAULT_SITE,
+                 mount_link=None):
+        self.console = Console(hub, on_command=on_command, site=site, mount_link=mount_link)
         self.httpd = ThreadingHTTPServer((host, port), _make_handler(self.console))
         self.httpd.daemon_threads = True
         self.host, self.port = host, port
@@ -386,7 +391,7 @@ _ICONS_JS = json.dumps({n: uik.icon(n, 20) for n in
 _PAGE_CSS = """
 #app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;position:relative;background:var(--bg)}
 .top{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 9px}
-.top .st{display:flex;align-items:center;gap:8px;font:600 10.5px var(--mono);color:var(--mut);letter-spacing:.04em}
+.top .st{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:2px 8px;font:600 10.5px var(--mono);color:var(--mut);letter-spacing:.04em}
 .top .st .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .top .st b{color:var(--gold)}
 .view{flex:1;position:relative;overflow:hidden}
@@ -460,7 +465,7 @@ _TEMPLATE = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="theme-color" content="#04060c"><meta name="mobile-web-app-capable" content="yes">
 <title>Jetson Telescopio</title><style>__CSS__</style></head><body>
 <div id="app">
- <div class="top">__BRAND__<div class="st"><span class="dot"></span><span id="backend">—</span> · <b id="mode">IDLE</b></div></div>
+ <div class="top">__BRAND__<div class="st"><span class="dot"></span><span id="backend">—</span> · <b id="mode">IDLE</b> · <span id="mount">montagem —</span></div></div>
  <div class="view"><div class="toast" id="toast"></div>
   <section class="tab on" id="tab-live">
     <div class="liveimg"><img id="live" src="/image/lagoon_trifid" alt="live"></div>
@@ -548,6 +553,10 @@ function loadPro(){drawFoc();drawGuide();drawHist();}
 const MC={IDLE:'#8492b0',SLEWING:'#33ddc4',SOLVING:'#33ddc4',FOCUSING:'#f5b95c',STACKING:'#49d17e',SCHEDULING:'#9aa2ff',TRACKING:'#f5b95c',ERROR:'#ff5d6c',STOPPED:'#8492b0'};
 async function poll(){try{const s=await(await fetch('/api/state')).json();const m=$('mode');m.textContent=s.state||'IDLE';m.style.color=MC[s.state]||'#f5b95c';
   $('backend').textContent=(s.backend||'').indexOf('GPU')>=0?'GPU':'CPU';const run=s.state==='STACKING';
+  const mt=s.mount||{},me=$('mount'),real=mt.source==='indi';
+  me.textContent=real?(mt.connected?'montagem conectada':'montagem desconectada'):'montagem simulada';
+  me.style.color=real?(mt.connected?'#49d17e':'#ff5d6c'):'#8492b0';
+  me.title=mt.connected&&mt.ra_deg!=null?('RA '+(mt.ra_deg/15).toFixed(3)+' h · DEC '+mt.dec_deg.toFixed(2)+'°'):(mt.error||'');
   if(run!==stacking){setStack(run);if(run)$('live').src='/stream.mjpg?'+Date.now();}
   const sub=s.accepted||0;$('t_snr').innerHTML=(s.snr?s.snr.toFixed(1):'—')+'<span>SNR</span>';$('t_fwhm').innerHTML=(s.fwhm?s.fwhm.toFixed(1)+'″':'—')+'<span>FWHM</span>';
   $('t_sub').innerHTML=sub+'<span>SUBS</span>';$('t_int').innerHTML=(sub*30>=60?Math.round(sub*30/60)+'min':sub*30+'s')+'<span>INTEGRADO</span>';

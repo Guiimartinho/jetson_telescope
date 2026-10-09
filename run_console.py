@@ -17,6 +17,7 @@ try:
 except Exception:
     pass
 
+from src.control.mount_link import mount_link_from_env
 from src.core.config import SessionConfig
 from src.core.controller import Controller
 from src.server.webview import FrameHub
@@ -33,7 +34,13 @@ def main():
     hub = FrameHub()
     ctrl = Controller(cfg, hub=hub)
     ctrl.start()
-    srv = ConsoleServer(hub, host=a.host, port=a.port, on_command=ctrl.submit)
+    # Montagem real: TELE_MOUNT=indi (definido no serviço da Jetson) liga o link automático,
+    # que conecta, envia hora/local e reconecta sozinho. Sem a variável, segue no simulador.
+    link = mount_link_from_env()
+    if link:
+        link.start()
+        print(">> montagem real: link automatico ligado (INDI)")
+    srv = ConsoleServer(hub, host=a.host, port=a.port, on_command=ctrl.submit, mount_link=link)
     srv.start()
     print(f">> Console de campo: http://localhost:{a.port}  (Live / Atlas / Pro)")
     try:
@@ -41,6 +48,8 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         print("\n>> encerrando console")
+        if link:
+            link.stop()
 
 
 if __name__ == "__main__":

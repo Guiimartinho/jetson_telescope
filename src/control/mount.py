@@ -102,21 +102,91 @@ class IndiMount(Mount):
     COORD = "EQUATORIAL_EOD_COORD"
 
     def __init__(self, device="Telescope Simulator", host="localhost", port=7624,
-                 client=None, connect_timeout=10.0):
+                 client=None, connect_timeout=10.0, serial_port=None, baud=None):
         from ..io.indi_client import IndiClient
         self.device = device
+        # Montagem em serial USB (OnStepX): o driver INDI abre /dev/ttyUSB0 a 9600 por padrão.
+        # Passe o nome fixo do udev e o baud do firmware. None = não mexe (os simuladores não
+        # têm porta serial).
+        self.serial_port, self.baud = serial_port, baud
         self._own_client = client is None
         self.client = client or IndiClient(host, port).connect()
         self._connect_timeout = connect_timeout
         self._connected = False
 
     def connect(self):
-        cli = self.client
-        cli.get_properties(self.device)
-        cli.connect_device(self.device, timeout=self._connect_timeout)
-        cli.wait_vector(self.device, self.COORD, timeout=self._connect_timeout)
+        cli, dev, t = self.client, self.device, self._connect_timeout
+        cli.get_properties(dev)
+        conn = cli.wait_vector(dev, "CONNECTION", timeout=t)
+        # Outro cliente (painel, console) pode já ter conectado o dispositivo: aí não mexemos.
+        if not (conn.elements.get("CONNECT") == "On" and conn.state != "Alert"):
+            self._configure_serial()
+            rev = conn.rev
+            cli.send_switch(dev, "CONNECTION", on="CONNECT", off=["DISCONNECT"])
+            conn = self._settle("CONNECTION", rev)
+            if conn.state == "Alert" or conn.elements.get("CONNECT") != "On":
+                raise ConnectionError(
+                    f"INDI: {dev} não conectou (porta {self.serial_port or 'padrão'}, baud "
+                    f"{self.baud or 'padrão'}). A placa está ligada e plugada? O baud é o do "
+                    "firmware?")
+        cli.wait_vector(dev, self.COORD, timeout=t)
         self._connected = True
         return self
+
+    def _configure_serial(self):
+        cli, dev, t = self.client, self.device, self._connect_timeout
+        if self.serial_port:
+            cli.wait_vector(dev, "DEVICE_PORT", timeout=t)
+            cli.send_text(dev, "DEVICE_PORT", {"PORT": self.serial_port})
+        if self.baud:
+            opts = cli.wait_vector(dev, "DEVICE_BAUD_RATE", timeout=t).elements
+            baud = str(self.baud)
+            if baud not in opts:
+                raise ValueError(f"INDI: {dev} não oferece o baud {baud} (opções: {sorted(opts)})")
+            cli.send_switch(dev, "DEVICE_BAUD_RATE", on=baud, off=[b for b in opts if b != baud])
+
+    def _settle(self, name, since):
+        """Espera a resposta do driver a um comando nosso, pulando o Busy intermediário."""
+        while True:
+            p = self.client.wait_change(self.device, name, since=since,
+                                        timeout=self._connect_timeout)
+            if p.state != "Busy":
+                return p
+            since = p.rev
+
+    def is_connected(self) -> bool:
+        """A montagem está de pé? Falso se o indiserver caiu (cabo tirado) ou se o driver
+        desconectou o dispositivo."""
+        if not self._connected or not self.client.alive:
+            return False
+        conn = self.client.get(self.device, "CONNECTION")
+        return (conn is not None and conn.elements.get("CONNECT") == "On"
+                and conn.state != "Alert")
+
+    def set_site_and_time(self, lat_deg, lon_deg, elev_m=0.0, when=None):
+        """Envia local e hora UTC à montagem — quem sabe a hora e o lugar é a Jetson.
+
+        O OnStepX não tem GPS nem RTC: acorda em 2000-01-01, lat/long 0. Sem isto um goto por
+        RA/DEC aponta para o lugar errado, porque o tempo sideral sai da hora e da longitude.
+        `lon_deg` é o usual (leste positivo, -180..180); o INDI quer 0..360 a leste.
+        """
+        from datetime import datetime, timezone
+        self._ensure()
+        when = when or datetime.now(timezone.utc)
+        if when.tzinfo is None:
+            raise ValueError("hora sem fuso é ambígua: passe um datetime com tzinfo (UTC)")
+        utc = when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        cli, dev, t = self.client, self.device, self._connect_timeout
+        for name, what, send in (
+            ("GEOGRAPHIC_COORD", "o local", lambda: cli.send_number(dev, "GEOGRAPHIC_COORD", {
+                "LAT": float(lat_deg), "LONG": float(lon_deg) % 360.0, "ELEV": float(elev_m)})),
+            ("TIME_UTC", "a hora", lambda: cli.send_text(dev, "TIME_UTC",
+                                                          {"UTC": utc, "OFFSET": "0"})),
+        ):
+            rev = cli.wait_vector(dev, name, timeout=t).rev
+            send()
+            if self._settle(name, rev).state == "Alert":
+                raise RuntimeError(f"INDI: {dev} recusou {what} ({name} em Alert)")
 
     def _ensure(self):
         if not self._connected:

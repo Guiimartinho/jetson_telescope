@@ -39,7 +39,7 @@ _CHILD = {"Number": "defNumber", "Switch": "defSwitch", "Text": "defText",
 
 class IndiProperty:
     """Snapshot de um vetor de propriedade (thread-safe via cópia no acesso)."""
-    __slots__ = ("device", "name", "kind", "state", "perm", "elements")
+    __slots__ = ("device", "name", "kind", "state", "perm", "elements", "rev")
 
     def __init__(self, device, name, kind, state="Idle", perm="rw"):
         self.device = device
@@ -48,6 +48,7 @@ class IndiProperty:
         self.state = state               # "Idle" | "Ok" | "Busy" | "Alert"
         self.perm = perm
         self.elements: dict[str, object] = {}   # nome_do_elemento -> valor
+        self.rev = 0                     # quantas vezes o servidor definiu/atualizou este vetor
 
     def __repr__(self):
         return (f"IndiProperty({self.device!r}, {self.name!r}, {self.kind}, "
@@ -96,6 +97,11 @@ class IndiClient:
 
     def __exit__(self, *exc):
         self.close()
+
+    @property
+    def alive(self) -> bool:
+        """Falso quando o servidor fechou a conexão — indiserver parado, cabo da placa tirado."""
+        return self._reader is not None and self._reader.is_alive()
 
     # --------------------------------------------------------------- envio (TX)
     def _send(self, xml: str):
@@ -176,6 +182,23 @@ class IndiClient:
                     raise TimeoutError(f"INDI: {device}/{name} não chegou a {state} (está {cur})")
                 self._lock.wait(remaining)
 
+    def wait_change(self, device: str, name: str, since: int, timeout=5.0) -> IndiProperty:
+        """Espera o vetor ser atualizado DEPOIS da revisão `since` — a resposta a um comando
+        nosso. Ao contrário de `wait_state`, não se engana com um estado antigo (o Alert de
+        uma tentativa anterior, por exemplo). Falha na hora se o servidor cair no meio."""
+        end = time.monotonic() + timeout
+        with self._lock:
+            while True:
+                p = self._props.get((device, name))
+                if p is not None and p.rev > since:
+                    return p
+                if not self.alive:
+                    raise ConnectionError("INDI: o servidor fechou a conexão")
+                remaining = end - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(f"INDI: {device}/{name} não respondeu em {timeout:.0f} s")
+                self._lock.wait(min(remaining, 0.25))
+
     # -------------------------------------------------------------------- BLOBs
     def wait_blob(self, timeout=30.0) -> dict:
         """Bloqueia até chegar um BLOB novo; devolve {'data':bytes,'format':str,'device','name'}."""
@@ -241,6 +264,8 @@ class IndiClient:
                 if c.tag == child:
                     prop.elements[c.get("name")] = _parse_value(kind, c.text)
             with self._lock:
+                old = self._props.get((device, name))
+                prop.rev = (old.rev if old else 0) + 1
                 self._props[(device, name)] = prop
                 self._lock.notify_all()
         elif tag in _SET:
@@ -254,6 +279,7 @@ class IndiClient:
                     prop = IndiProperty(device, name, kind, state)
                     self._props[(device, name)] = prop
                 prop.state = state
+                prop.rev += 1
                 if kind != "BLOB":
                     for c in elem:
                         if c.tag == child:
