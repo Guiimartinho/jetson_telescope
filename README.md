@@ -93,6 +93,8 @@ são armadilhas que travam meses sem serem o diferencial. Por isso:
 | [`docs/31-bringup-camera-controle.md`](docs/31-bringup-camera-controle.md) | ⭐ **Milestone F: como a Jetson recebe a imagem (USB3/MIPI→GPU) e controla montagem/foco p/ apontar — fluxograma + sequência F1–F6** |
 | [`docs/32-hardware-bom.md`](docs/32-hardware-bom.md) | ⭐ **BOM de hardware: OnStepX + FYSETC E4 + OpenAstroExplorer (OAE, 3D imprimível compacto) + SV705 + motores/ótica/foco/energia — o que imprimir e comprar** |
 | [`docs/33-console-campo.md`](docs/33-console-campo.md) | ⭐ **Console de campo (UI de produto Live/Atlas/Pro, estilo DWARF+ASIAIR): webpage no celular via WiFi, catálogo+telemetria reais — `run_console.py` (8080)** |
+| [`docs/34-campo-offline-e-arranque.md`](docs/34-campo-offline-e-arranque.md) | ⭐ **Prontidão de campo: Atlas 78,8s→3s, astropy 100% offline (sem IERS pela rede), `dialout`** |
+| [`docs/35-firmware-onstepx-idf.md`](docs/35-firmware-onstepx-idf.md) | ⭐ **Firmware da montagem: OnStepX (ESP-IDF 6) na FYSETC E4, gravado e validado — link serial automático com a Jetson (`/dev/telescope-mount`, INDI, hora/local, reconexão), drivers TMC conferidos no hardware** |
 | [`TASKS.md`](TASKS.md) | ⭐ **Plano de execução: Fase 1→4 + Milestones D/E/F (fechar software antes da câmera)** |
 
 ---

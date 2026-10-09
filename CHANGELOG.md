@@ -5,6 +5,149 @@ Todas as mudanças notáveis do projeto. Formato baseado em
 
 ## [Não lançado]
 
+### Link automático Jetson ↔ montagem + drivers dos motores validados (2026-10-09)
+- **Do plugar até a montagem pronta, nenhum passo manual.** `scripts/jetson_setup_mount.sh`
+  instala: regra udev → **`/dev/telescope-mount` em qualquer porta USB**; e
+  `telescope-indi.service`, amarrado ao dispositivo, que sobe quando a placa aparece e cai
+  quando o cabo sai. Arquivos versionados em `deploy/jetson/`.
+- **`IndiMount` fecha as duas lacunas do teste manual:** configura porta e baud da serial
+  antes do `CONNECT` (o INDI abre a 9600 por padrão) e ganhou `set_site_and_time()` — o
+  OnStepX acorda em 2000-01-01, lat/long 0, e sem hora e local um goto por RA/DEC erra.
+  Falha de conexão vira `ConnectionError` claro e imediato, não timeout mudo.
+- **`MountLink` (`src/control/mount_link.py`):** mantém a montagem conectada sozinha —
+  conecta quando o indiserver aparece, reenvia hora e local a cada reconexão, percebe a
+  queda do cabo pelo socket fechado e volta a tentar. Ligado por `TELE_MOUNT=indi` (o serviço
+  da Jetson define; PC e CI seguem nos simuladores).
+- **Console:** `/api/state` ganhou `mount` e o cabeçalho mostra "montagem conectada /
+  desconectada / simulada".
+- **`IndiClient`:** `alive` (o servidor fechou a conexão?) e `wait_change()` (espera a
+  resposta a um comando nosso sem se enganar com um `Alert` antigo).
+- **Verificado na Orin:** hora, fuso e coordenadas lidos de volta pelo WiFi da própria placa;
+  a casa da montagem passou a apontar o polo **sul** celeste ao receber a latitude; INDI
+  parado e religado, o link voltou sozinho; no **reboot da Jetson**, "montagem conectada"
+  antes de 30 s de boot sem tocar em nada; e, com o **cabo trocado de porta USB**, o INDI
+  parou e voltou sozinho e o console reconectou em cerca de 2 s.
+- **Drivers TMC2209 validados no hardware.** O OnStepX só confere os drivers sob
+  `MOTOR_DRIVER_DETECT`; sem isso um pino de UART errado não vira erro. Novo build de
+  diagnóstico (`idf.py -DONSTEPX_DIAG=ON build`): os três eixos reportaram
+  `motor driver device detected` em GPIO21/22 — a correção de pinagem de setembro está
+  confirmada na placa. `config_assert.cpp` recusa um build de produto com `DEBUG` ligado.
+- **Gravação pela própria Jetson** (`scripts/jetson_flash_mount.sh`, `scripts/mount_bootlog.py`):
+  o diagnóstico entrou e o firmware de produto voltou pelo mesmo cabo do link. A placa não
+  precisa mais voltar ao PC.
+- **Fix: as telas mostravam "CPU" com tudo parado.** O hub só recebia o campo `backend`
+  quando um modo rodava; ocioso ficava vazio, e console e painel caíam no padrão "CPU" com o
+  pipeline em CuPy/GPU. O `Controller` agora publica o estado inicial (IDLE + backend real).
+- Testes: +19 (`test_mount_link.py` 15, `test_console.py` 2, `test_firmware_config.py` 1,
+  `test_controller.py` 1), contra um servidor INDI falso que agora imita o
+  `indi_lx200_OnStep` (só conecta com porta e baud certos; acorda sem hora nem local; pode
+  "morrer" e voltar). **260 verdes** + 5 pulados. Doc `docs/35` §9–10.
+- **Em aberto:** os modos do painel (GOTO, agendador, rastreio) ainda usam os simuladores —
+  trocar pela montagem real exige a mecânica; calibração (passos/grau, sentido, limites).
+
+### Primeiro flash do OnStepX na E4 + link serial com a Jetson (2026-10-09)
+- **A controladora está gravada e viva.** Fonte de 12V na bancada; placa lida pelo USB do PC
+  (ponte CH340): ESP32-D0WD-V3 rev 3.1, **16 MB de flash confirmados na placa**. Antes de
+  qualquer escrita, **backup integral do firmware de fábrica** (Marlin bugfix-2.0.x sobre
+  ESP-IDF 3.2.3; 16.777.216 bytes em `firmware/backup/`, fora do git). Depois `erase-flash`
+  e gravação de bootloader + partições + app, com hash verificado.
+- **Teste de fumaça LX200 pela serial** (só consultas): `:GVP#` → `On-Step#`, versão
+  `10.28x`, em casa apontando o polo, focalizador presente. Pronta para comandos 7,7 s após
+  o reset. Binário: **1.054.576 bytes** (66% livres).
+- **Correção de rumo — o link da Jetson é o cabo, como era o plano.** Em setembro, ao ver
+  que o kernel do JetPack 6 não traz o driver CH340, o link foi virado para WiFi e isso foi
+  documentado como decisão. O problema real custava dez minutos:
+  `scripts/jetson_install_ch341.sh` compila o módulo `ch341` do kernel mainline para o
+  kernel em execução e mascara a regra udev do `brltty`, que no Ubuntu 22.04 derruba o
+  CH340 segundos depois de ele aparecer. Instalado e carregado na Orin.
+- **O WiFi da placa fica, como acesso secundário:** ponto de acesso próprio
+  (`OnStep-Telescopio`, LX200 sobre TCP em `192.168.0.1:9999`). A senha mora em
+  `firmware/config/Config.local.h`, **fora do git**, gerada aleatória pelo
+  `fetch_onstepx.py`; a Config versionada recusa compilar sem ela, então nunca sai um
+  firmware com a senha padrão do OnStepX. Modo estação ficou de fora de propósito (exigiria
+  a senha da rede de casa no firmware) e uma trava de compilação impede que volte.
+  Verificado de ponta a ponta: um PC entrou no AP e `:GVP#` pela TCP 9999 devolveu `On-Step#`.
+- **Log do IDF em `WARN`.** O console divide a UART0 com o canal LX200; em `INFO` o WiFi
+  imprimiria uma linha a cada cliente do AP, no meio das respostas que o INDI lê.
+  Verificado: 0 bytes espontâneos na serial enquanto um cliente entrava e saía do AP.
+- **O que a bancada desmentiu:** `docs/35` dizia que a E4 "não se alimenta pelo USB:
+  comprovado por não enumerar". Com os 12V ligados ela continuou fora do `lsusb` da Jetson
+  (que não depende de driver) e enumerou na hora no PC. O sintoma era real; a causa não
+  estava provada, e a da Jetson segue em aberto.
+- Testes: `test_firmware_config.py` passou de 17 para 22 (link serial num baud do INDI,
+  rádio só como AP, nenhuma credencial versionada, log em `WARN`, arquivo de segredos gerado
+  e nunca sobrescrito) + duas travas novas em `config_assert.cpp`. `.gitattributes` força LF
+  nos `.sh` (com `autocrlf` eles quebrariam na Jetson).
+- **Link validado na Jetson, de ponta a ponta, sem mudar uma linha do nosso código:**
+  `1a86:7523` → `ch341` → `/dev/ttyUSB0` (aberto pelo usuário comum) → `indi_lx200_OnStep`
+  a 115200 → `IndiMount.get_radec()` devolveu RA 12,77 h / DEC +90°, a casa da GEM. Abrir a
+  porta não reinicia a placa. A não-enumeração anterior na Jetson era a ligação do cabo.
+- **Em aberto:** `IndiMount` precisa configurar porta e baud da serial (hoje feito à mão; o
+  INDI abre a 9600); a Jetson tem de enviar hora e local na conexão (a montagem reporta
+  `UTC 2000-01-01` e lat/long 0 — sem isso um goto por RA/DEC erra); **validar a UART dos
+  TMC2209 no hardware** — `:GXU1#` devolve `0` porque o monitoramento vem desligado e a
+  detecção só existe sob `MOTOR_DRIVER_DETECT`, então hoje um pino de UART errado não
+  viraria erro. Doc `docs/35` §8–9.
+
+### Firmware da montagem: OnStepX como projeto ESP-IDF 6 (2026-09-08)
+- **`firmware/`**: projeto ESP-IDF 6 completo para a **FYSETC E4** (ESP32-WROOM-32E) —
+  `CMakeLists`, `sdkconfig.defaults`, `partitions.csv` (16MB com OTA), componente `main`,
+  componente `onstepx` e scripts. Doc `docs/35`.
+- **Migração pelo caminho oficial, não por reescrita.** O OnStepX tem **432 arquivos /
+  66.367 linhas** (o `.ino` em si são 161). Reescrevê-lo em API nativa do IDF seria meses
+  num código de tempo real, e contra o princípio de reuso (`docs/08`). Em vez disso,
+  `arduino-esp32` entra como **componente gerenciado do IDF** — ele declara
+  `idf: ">=5.3,<6.2"` e a release 3.3.9 adicionou suporte a IDF 6.0. Resolvido: 3.3.11.
+- **Poda em camadas** (`scripts/prune_onstepx.py`): remove o que não é alcançável na E4.
+  Camada 1 aplicada — **−33 arquivos, −3.645 linhas** (HAL de atmel/STM32/Teensy/mbed/
+  arduinoM0 + 17 pinmaps de outras placas). Camadas 2 e 3 declaradas para aplicar aos poucos,
+  cada uma com build verde antes da seguinte.
+- **Achado que virou teste — a UART dos TMC2209.** A tabela de pinos oficial da FYSETC (e o
+  Marlin) põem a UART dos drivers em **GPIO21/22**; o pinmap `FYSETC_E4` do OnStepX usa
+  **GPIO15**, que nesta placa é o **Z-MIN/Z-DIAG**. O padrão não alcançaria os drivers e
+  colidiria com o endstop. Corrigido na nossa Config + patch que torna `SERIAL_TMC_TX`
+  sobrescrevível (o pinmap o redefinia sem guarda, descartando nossa escolha em silêncio).
+- **Atrito arduino-esp32 × IDF 6** documentado e resolvido cirurgicamente: `-Werror` do IDF 6
+  transformava dois avisos de bibliotecas do Arduino em erro fatal. Rebaixados **só** nesse
+  componente (`LittleFS`), e o do mbedTLS resolvido fazendo o que o aviso pedia
+  (`CONFIG_MBEDTLS_PSK_MODES`). Nosso código e o do OnStepX seguem sob `-Werror`.
+- **A árvore do OnStepX não é versionada** — baixada pinada no commit `65a7518` (v10.28x)
+  por `scripts/fetch_onstepx.py`, que instala a Config, aplica o patch e poda. Build
+  reprodutível sem 66k linhas de terceiro no `git diff`.
+- **Build VERDE no ESP-IDF v6.0.2** (alvo `esp32`): `onstepx_telescope.bin` = **1.063.440
+  bytes**, 66% livres na partição de 3 MB. Outros erros achados e corrigidos pelo caminho:
+  `SERIAL_B` não existe na E4 (o canal de rede é `SERIAL_RADIO`), `FileVersionConfig`
+  ausente, e o OnStepX **não embute** o driver dos TMC (`<TMC2209.h>` é lib externa — virou
+  o componente `firmware/components/tmc2209/`).
+- **Política de warnings explícita:** `-Wno-error` **apenas** nos componentes de terceiro
+  (`onstepx`, `tmc2209`) — o OnStepX é escrito para o toolchain Arduino e dispara avisos
+  reais mas não acionáveis (`volatile--` do C++20, `unsigned < 0` dentro do `Arduino.h`).
+  Nosso código e o do IDF seguem sob `-Werror`.
+- Testes: **+26** (`test_firmware_config.py` 17, `test_firmware_prune.py` 9), sem placa nem
+  toolchain, mais `config_assert.cpp` — travas de pinagem verificadas **após o
+  pré-processador** (o valor que o compilador usou, não o texto da Config). **Ambos
+  verificados com dentes**: injetando `SERIAL_TMC_TX 15`, dois testes falham e o **build
+  para** com as mensagens escritas.
+- ⛔ **Gravar continua bloqueado por uma fonte 12V** — a E4 não se alimenta pelo USB (não
+  enumera nem na Jetson nem no PC). Ver `docs/34`.
+
+### Prontidão de campo: arranque do Atlas + operação offline (2026-09-08)
+- **Atlas abria em 78,8 s** no Orin (2ª chamada: 0,27 s) — no celular, lê como travado. Causa
+  dominante: o **astropy tentava BAIXAR a tabela IERS** (~70 s), mais 6,6 s de carga do OpenNGC
+  e 1,7 s da 1ª transformação de coordenada. `catalog.configure_astropy_offline()`
+  (`auto_download=False` **+ `auto_max_age=None`**) + `console.warm_cache()` numa thread no
+  arranque do serviço → **3,07 s no pior caso, 0,28 s aquecido**.
+- **Elimina uma dependência de rede escondida:** `docs/33` promete campo sem internet, mas o
+  cálculo de visibilidade saía para a rede a cada boot do serviço. Agora não sai.
+- **Armadilha coberta por teste:** desligar só o `auto_download` **quebra** o cálculo
+  (`ValueError ... predictive values ... more than 30.0 days old` — o caso real do Orin). O teste
+  `test_altitude_still_works_offline` falhou primeiro e forçou a segunda trava. Trocar lento por
+  quebrado teria sido pior.
+- **`usermod -aG dialout`** na Jetson: `/dev/ttyUSB*` não abriria para o `indi_lx200_OnStep`
+  (que roda como usuário) quando a controladora da montagem for plugada — pré-requisito do Milestone F.
+- Testes: +5 (`test_catalog.py` 3, `test_console.py` 2). **210 verdes** (GPU) + 5 pulados;
+  16/16 dos módulos tocados verificados no próprio Orin (aarch64, Py3.10, astropy 6.1.7). Doc `docs/34`.
+
 ### T7/T21/T22 — CI + git, catálogo do céu, mais alvos reais (2026-07-21)
 - **T22 catálogo**: `src/core/catalog.py` (OpenNGC/pyongc, ~14k objetos) — `find()` (RA/DEC p/ GOTO),
   `Rig` (FOV+mag limite), `framable()` (1868 capturáveis c/ nosso rig), `visible()` (altitude); `run_catalog.py`.

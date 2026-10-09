@@ -48,7 +48,7 @@ Arquitetura: Ports & Adapters / Pipes & Filters / State Machine (ver `docs/11`).
 - Salvar subs FITS (opcional), metadados de sessão, e **resume**. Log estruturado.
 - **Reusar** astropy. Testes: grava/relê sessão; resume continua de onde parou.
 
-### ☐ T7 — CI (GitHub Actions)
+### T7 — CI (GitHub Actions)  *(feito — ver Milestone D+)*
 - `git init` + primeiro commit; workflow rodando `pytest -m "not hardware"` + build/ctest do C++.
 - Testes: o próprio CI (verde no push).
 
@@ -87,7 +87,7 @@ Arquitetura: Ports & Adapters / Pipes & Filters / State Machine (ver `docs/11`).
 Objetivo: validar 100% do software com ferramentas grátis + simuladores + dados reais, para só
 gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver docs/20 (checklist).
 
-### ☐ T13 — Validar a camada INDI contra os *simuladores* do INDI (sem hardware)
+### T13 — Validar a camada INDI contra os *simuladores* do INDI (sem hardware)  *(feito — docs/20)*
 - Escrever/testar `IndiCameraSource`/`IndiMount`/`IndiFocuser`/`IndiFilterWheel` contra
   `indi_simulator_ccd/telescope/focuser/filter` (grátis, vêm com o INDI). Exercita a fronteira de HW inteira.
 - Testes: adapters conectam, leem propriedades e disparam ações contra o INDI simulado.
@@ -159,4 +159,11 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
 - 8GB deu conta da stack. **Falta (otimização):** OpenCV-CUDA (compilação de horas), engine TensorRT do YOLO.
 
 ## Milestone F — Bring-up de hardware (precisa das peças físicas)
+- **Controladora da montagem — em andamento (docs/35).** OnStepX gravado na FYSETC E4 em
+  2026-10-09. Link **automático** com a Jetson: nome fixo em qualquer porta USB, INDI que
+  sobe e cai com a placa, `MountLink` que conecta, envia hora/local e reconecta sozinho
+  (provado com reboot). Os três TMC2209 validados no hardware; gravação pela própria Jetson.
+  Falta: ligar a montagem real aos modos do painel (GOTO/agendador/rastreio ainda usam os
+  simuladores) e a calibração mecânica — passos/grau, sentido, limites — que dependem da
+  montagem impressa.
 - Captura **MIPI CSI zero-copy** (Argus/NVMM) ou USB3/INDI do IMX585; foco/solve/tracking no céu real.
