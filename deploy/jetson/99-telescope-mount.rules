@@ -1,0 +1,11 @@
+# Controladora da montagem (FYSETC E4 com OnStepX, ponte USB CH340 = 1a86:7523).
+#
+# Dá à placa um nome FIXO em qualquer porta USB da Jetson: /dev/telescope-mount.
+# O /dev/ttyUSBn muda conforme a ordem em que os dispositivos aparecem; o link não.
+# O CH340 não tem número de série, então a regra casa por VID:PID — quem confirma que do
+# outro lado está mesmo o OnStepX é o handshake LX200 do driver INDI.
+#
+# TAG+="systemd" e SYSTEMD_WANTS fazem o systemd subir o telescope-indi.service quando a
+# placa aparece (no boot ou ao plugar). A unidade se amarra ao dispositivo (BindsTo), então
+# cai sozinha quando o cabo sai. Instalado por scripts/jetson_setup_mount.sh. Ver docs/35.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="telescope-mount", GROUP="dialout", MODE="0660", TAG+="systemd", ENV{SYSTEMD_WANTS}+="telescope-indi.service"
