@@ -1,0 +1,10 @@
+## Dependências gerenciadas pelo IDF Component Manager.
+##
+## `arduino-esp32` traz o core Arduino como componente do IDF — é o que permite compilar as
+## ~66k linhas do OnStepX sem reescrevê-las. A faixa `>=3.3.9` é deliberada: foi essa release
+## (2026-06-04) que adicionou "support for ESP-IDF v6.0". O próprio componente declara
+## `idf: ">=5.3,<6.2"`, então o IDF 6.0.2 desta máquina está dentro da faixa suportada.
+dependencies:
+  idf: ">=5.3,<6.2"
+  espressif/arduino-esp32:
+    version: "^3.3.9"
