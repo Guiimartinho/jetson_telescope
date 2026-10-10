@@ -1,0 +1,15 @@
+{
+ "items": [
+  {
+   "camera": "ASI2600MC (dado real)",
+   "frames": 15,
+   "has_fits": true,
+   "id": "lagoon_trifid",
+   "integration_approx": false,
+   "integration_s": 2700,
+   "source": "reference",
+   "target": "M8 Lagoa + M20 Trifida",
+   "type": "nebula"
+  }
+ ]
+}

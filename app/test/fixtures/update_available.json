@@ -1,0 +1,14 @@
+{
+ "available": {
+  "notes": [
+   "Autofoco mais rápido",
+   "Correções na noite autônoma"
+  ],
+  "version": "0.2.0"
+ },
+ "current": "0.1.0",
+ "enabled": true,
+ "error": null,
+ "progress": null,
+ "state": "idle"
+}

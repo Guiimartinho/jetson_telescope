@@ -1,0 +1,13 @@
+# Tabela de partições — flash de 16MB da FYSETC E4.
+#
+# Duas partições de app (ota_0/ota_1): o layout já comporta atualização OTA, caso o rádio
+# seja religado um dia. Hoje o rádio está desligado e a placa é gravada pelo cabo USB —
+# o mesmo que a liga à Jetson (ver docs/35).
+# `nvs` guarda a configuração persistente do OnStepX (local, data/hora, modelo de apontamento).
+#
+# Name,     Type, SubType,  Offset,   Size,   Flags
+nvs,        data, nvs,      0x9000,   0x5000,
+otadata,    data, ota,      0xe000,   0x2000,
+app0,       app,  ota_0,    0x10000,  0x300000,
+app1,       app,  ota_1,    ,         0x300000,
+spiffs,     data, spiffs,   ,         0x100000,

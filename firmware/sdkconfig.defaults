@@ -1,0 +1,56 @@
+# Configuração base do projeto (ESP-IDF 6.0). `idf.py set-target esp32` gera o sdkconfig
+# real a partir daqui; o sdkconfig gerado NÃO é versionado (é derivado). Ver docs/35.
+
+# --- Alvo: a FYSETC E4 usa ESP32-WROOM-32E (ESP32 clássico, 16MB de flash) ---
+CONFIG_IDF_TARGET="esp32"
+
+# --- Arduino como componente: ele fornece app_main() e chama setup()/loop() do OnStepX ---
+CONFIG_AUTOSTART_ARDUINO=y
+
+# --- Flash: 16MB, conforme a especificação da placa ---
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# --- Partições com OTA: permite atualizar o firmware pela rede depois do 1o flash ---
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- CPU no máximo: o laço de passo do motor é o caminho crítico ---
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_FREERTOS_HZ=1000
+
+# --- Console pela UART0 (mesmo caminho do CH340), 115200 ---
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
+
+# --- Watchdog: NÃO abortar por task ociosa. O OnStepX ocupa a CPU em rajadas durante o
+#     goto; um TWDT agressivo reiniciaria a montagem no meio de um slew. ---
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=30
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=n
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=n
+
+# --- Ver o motivo de um crash no monitor em vez de um reboot silencioso ---
+CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y
+
+# --- WiFi: a placa sobe um ponto de acesso próprio (acesso secundário; ver a Config do
+#     OnStepX). O link com a Jetson é a serial USB. ---
+CONFIG_ESP32_WIFI_ENABLED=y
+
+# --- Log do IDF em WARN: o console divide a UART0 com o SERIAL_A, o canal LX200 da Jetson.
+#     Em INFO o WiFi imprime uma linha a cada cliente que entra ou sai do AP; no meio de uma
+#     resposta LX200 isso corrompe a leitura do INDI. O log do BOOTLOADER é config separada e
+#     continua em INFO: o diagnóstico de arranque não se perde. ---
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+
+# --- C++: o OnStepX usa exceções? Não. Desligar economiza flash e latência. ---
+CONFIG_COMPILER_CXX_EXCEPTIONS=n
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# --- mbedTLS: o ssl_client.cpp do arduino-esp32 emite um #warning pedindo exatamente isto
+#     ("Enable PSK based ciphersuite modes"), e com o -Werror do IDF 6 o aviso vira erro.
+#     Fazemos o que o aviso pede em vez de silenciá-lo. Não usamos TLS, mas a biblioteca
+#     é compilada de qualquer forma pelo componente Arduino. ---
+CONFIG_MBEDTLS_PSK_MODES=y

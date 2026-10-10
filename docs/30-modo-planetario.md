@@ -54,6 +54,16 @@ cacheado, então mexer nos sliders é **~26 ms** (só wavelets+níveis na GPU). 
 controles (stretch/SCNR/asinh/IA). A distinção é o campo `mode` de cada alvo em `/targets`. Quando a câmera
 chegar, troca-se o simulador por captura ROI real — a UI e o render não mudam.
 
+## Pelo app do celular — modo `planetary` do `Controller`
+
+O app pede a captura por `POST /api/v1/observe/planetary` (`app/docs/04-api.md` §10), e o `Controller`
+roda o modo `planetary`: aponta para o corpo (se pedido), grava os quadros e **fica só com os mais nítidos
+conforme chegam** — uma fila de prioridade com os `K` melhores, porque o vídeo inteiro não caberia na
+memória da Jetson —, e no fim chama o mesmo `lucky_stack`. O andamento (quadros recebidos, quantos estão
+sendo aproveitados) vai para o app pelo estado; o estado da máquina é `CAPTURING`. Hoje os quadros vêm do
+`PlanetSimulator`; com a câmera real, muda só a fonte. Testes: `tests/test_controller.py` (modo
+`planetary`) e `tests/test_api_phase4.py`.
+
 ## Caminho até a câmera real
 
 O pipeline é **agnóstico à fonte** — recebe qualquer lista de frames. Para o modo real basta trocar o

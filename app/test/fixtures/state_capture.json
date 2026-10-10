@@ -1,0 +1,95 @@
+{
+ "backend": "CuPy/GPU (Orin)",
+ "camera": {
+  "applied": false,
+  "connected": true,
+  "exposure_s": 60.0,
+  "gain": 200,
+  "model": "simulador de céu",
+  "offset": 10,
+  "source": "sim",
+  "temp_c": null
+ },
+ "capture": {
+  "body": "saturn",
+  "done": false,
+  "frames": 120,
+  "keep": 0.15,
+  "kept": 45,
+  "total": 300
+ },
+ "filter": "",
+ "focus": {
+  "best": null,
+  "curve": [],
+  "max": 10000,
+  "min": 0,
+  "position": 6290,
+  "source": "sim"
+ },
+ "focus_pos": 6290,
+ "job": {
+  "error": null,
+  "job": "j-0000-3",
+  "kind": "planetary",
+  "state": "running",
+  "steps": [
+   {
+    "name": "capture",
+    "state": "running"
+   }
+  ],
+  "target": "Saturno"
+ },
+ "mount": {
+  "connected": false,
+  "dec_deg": null,
+  "error": null,
+  "features": [
+   "jog",
+   "park",
+   "tracking",
+   "home",
+   "polar"
+  ],
+  "moving": null,
+  "parked": false,
+  "ra_deg": null,
+  "source": "sim",
+  "tracking": true
+ },
+ "night": [],
+ "phase": "capturando",
+ "pointing": {
+  "error": 0.0,
+  "unit": "px"
+ },
+ "polar": {
+  "aligned": false,
+  "alt_arcmin": 38.2,
+  "az_arcmin": -51.6,
+  "lat": -23.55,
+  "measured": true,
+  "points": 3,
+  "stale": false,
+  "step": 3,
+  "total_arcmin": 64.2
+ },
+ "queue": {
+  "done": 0,
+  "total": 0
+ },
+ "stack": {
+  "accepted": 0,
+  "fwhm_px": 0.0,
+  "integration_s": null,
+  "rejected": 0,
+  "snr": 0.0,
+  "target": "saturn"
+ },
+ "state": "CAPTURING",
+ "system": {
+  "disk_free_gb": 200.1,
+  "temp_c": 41.5
+ }
+}

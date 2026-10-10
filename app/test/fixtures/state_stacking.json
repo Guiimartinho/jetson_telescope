@@ -1,0 +1,72 @@
+{
+ "backend": "CuPy/GPU (Orin)",
+ "camera": {
+  "applied": false,
+  "connected": true,
+  "exposure_s": 30.0,
+  "gain": 120,
+  "model": "simulador de céu",
+  "offset": 10,
+  "source": "sim",
+  "temp_c": null
+ },
+ "capture": null,
+ "filter": "",
+ "focus": {
+  "best": null,
+  "curve": [],
+  "max": null,
+  "min": null,
+  "position": 6300,
+  "source": "sim"
+ },
+ "focus_pos": 6300,
+ "job": {
+  "error": null,
+  "job": "j-0000-1",
+  "kind": "stack",
+  "state": "running",
+  "steps": [
+   {
+    "name": "stack",
+    "state": "running"
+   }
+  ],
+  "target": null
+ },
+ "mount": {
+  "connected": true,
+  "dec_deg": -5.39,
+  "error": null,
+  "features": [],
+  "moving": null,
+  "parked": null,
+  "ra_deg": 83.82,
+  "source": "indi",
+  "tracking": null
+ },
+ "night": [],
+ "phase": "empilhando",
+ "pointing": {
+  "error": 0.0,
+  "unit": "px"
+ },
+ "polar": null,
+ "queue": {
+  "done": 0,
+  "total": 0
+ },
+ "stack": {
+  "accepted": 12,
+  "fwhm_px": 2.9,
+  "integration_s": null,
+  "rejected": 2,
+  "snr": 9.7,
+  "target": "M31"
+ },
+ "state": "STACKING",
+ "system": {
+  "disk_free_gb": 200.1,
+  "temp_c": 41.5
+ }
+}

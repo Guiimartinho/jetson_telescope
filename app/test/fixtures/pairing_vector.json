@@ -1,0 +1,8 @@
+{
+ "client_name": "Pixel do Guilherme — ação",
+ "fingerprint": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1-f4CBgoM",
+ "nonce": "yMnKy8zNzs_Q0dLT1NXW19jZ2tvc3d7f4OHi4-Tl5uc",
+ "proof": "TJ4iY0hG_q_CYVbcNfNWMHGHo0_6A7bFX56TEC0pxXQ",
+ "secret": "AAECAwQFBgcICQoLDA0ODw",
+ "uri": "tele://pair?v=1&id=tele-6465&fp=ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1-f4CBgoM&s=AAECAwQFBgcICQoLDA0ODw&port=8443&host=192.168.3.221&ssid=Telescopio-6465&psk=senha-do-wifi"
+}

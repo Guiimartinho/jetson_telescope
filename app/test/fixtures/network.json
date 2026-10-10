@@ -1,0 +1,12 @@
+{
+ "address": "192.168.3.221",
+ "enabled": false,
+ "hostname": "telescopio",
+ "hotspot": null,
+ "known": [],
+ "last_error": null,
+ "mode": "unknown",
+ "port": 8443,
+ "switching": false,
+ "wifi": null
+}

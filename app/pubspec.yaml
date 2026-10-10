@@ -1,0 +1,33 @@
+name: telescope_app
+description: "App do telescópio: conecta, observa e revisa pela API protegida da Jetson."
+publish_to: 'none'
+version: 0.3.0+3
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1      # estado
+  go_router: ^17.5.0            # navegação
+  flutter_svg: ^2.3.0           # os nossos ícones (assets/icons, gerados do ui_kit)
+  crypto: ^3.0.7                # SHA-256 e HMAC: impressão digital e prova do pareamento
+  shared_preferences: ^2.5.6    # preferências e último aparelho
+  flutter_secure_storage: ^11.2.0   # o token do celular, no cofre do sistema
+  mobile_scanner: ^7.4.2        # ler o QR de pareamento
+  geolocator: ^14.1.1           # latitude e longitude para a Jetson
+  share_plus: ^13.3.1           # entregar a imagem exportada ao Android (salvar, enviar)
+  nsd: ^5.0.1
+  flutter_local_notifications: ^22.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/brand/

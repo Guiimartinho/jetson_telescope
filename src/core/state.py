@@ -16,6 +16,8 @@ class State(Enum):
     STACKING = "empilhando"
     SCHEDULING = "agendando"
     TRACKING = "rastreando"
+    PREVIEW = "ao vivo"                 # câmera ao vivo, sem empilhar (enquadrar, focar à mão)
+    CAPTURING = "capturando"            # vídeo planetário: muitos quadros curtos, para escolher
     ERROR = "erro"
     STOPPED = "encerrado"
 
@@ -28,10 +30,15 @@ class State(Enum):
 # Invariante de segurança preservado: SLEWING nunca vai direto p/ STACKING (tem que SOLVING).
 _TRANSITIONS = {
     State.IDLE:       {State.SLEWING, State.SOLVING, State.FOCUSING, State.STACKING,
-                       State.SCHEDULING, State.TRACKING, State.STOPPED, State.ERROR},
+                       State.SCHEDULING, State.TRACKING, State.PREVIEW, State.CAPTURING,
+                       State.STOPPED, State.ERROR},
+    State.PREVIEW:    {State.PREVIEW, State.IDLE, State.ERROR, State.STOPPED},
+    State.CAPTURING:  {State.CAPTURING, State.STACKING, State.IDLE, State.ERROR, State.STOPPED},
     State.SLEWING:    {State.SOLVING, State.SCHEDULING, State.ERROR, State.STOPPED},
+    # SOLVING -> CAPTURING: o vídeo planetário também só começa depois de reconhecer o céu
     State.SOLVING:    {State.SOLVING, State.FOCUSING, State.STACKING, State.SLEWING,
-                       State.SCHEDULING, State.TRACKING, State.ERROR, State.STOPPED},
+                       State.SCHEDULING, State.TRACKING, State.CAPTURING, State.ERROR,
+                       State.STOPPED},
     State.FOCUSING:   {State.STACKING, State.SOLVING, State.SCHEDULING, State.IDLE,
                        State.ERROR, State.STOPPED},
     State.STACKING:   {State.IDLE, State.SLEWING, State.FOCUSING, State.SCHEDULING,

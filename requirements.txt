@@ -11,6 +11,17 @@ astroscrappy>=1.1      # remoção de raios cósmicos/hot pixels (L.A.Cosmic) �
 onnxruntime>=1.16      # runner de denoise IA (astro-csbdeep/GraXpert→ONNX) — postproc/ai_denoise.py
 #   Jetson: use onnxruntime-gpu (EP TensorRT/CUDA). StarNet++ (opcional): baixar o binário do autor.
 
+websockets>=11         # console: canal em tempo real (estado empurrado). Sem ela, a página consulta.
+
+# API do app do celular (src/api — `run_console.py --api`). Tudo livre (MIT/BSD/Apache).
+fastapi>=0.110         # rotas, validação de entrada e descrição da API gerada
+uvicorn>=0.25          # servidor HTTPS/WSS (TLS 1.3 com o certificado do aparelho)
+cryptography>=3.4      # chave ECDSA P-256 e certificado do aparelho
+segno>=1.6             # desenha o QR de pareamento no terminal (opcional: sem ela sai só o código)
+httpx>=0.27            # só para os testes das rotas (cliente de teste do FastAPI)
+zeroconf>=0.130        # opcional, só no PC: `--advertise` anuncia a API na rede para o app achar
+#   (na Jetson quem anuncia é o avahi; sem o pacote, o endereço continua vindo no QR)
+
 # Reuso (opcional, recomendado) — registro robusto por triângulos de estrelas (MIT).
 # Se ausente, o registro cai para o método próprio (cv2). Ver src/gpu/registration.py
 astroalign>=2.5        # puxa scikit-image + sep + scipy (autofoco usa scipy)

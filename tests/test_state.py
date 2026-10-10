@@ -51,3 +51,28 @@ def test_can_predicts_transition():
 def test_label_is_human_readable():
     assert State.STACKING.label == "empilhando"
     assert SessionStateMachine().label == "pronto"
+
+
+def test_live_preview_is_a_dead_end_that_only_leaves_by_stopping():
+    """Câmera ao vivo: entra parado e só sai parando. Dela não se "segue" para apontar nem
+    empilhar: cada um desses é um comando novo, com a máquina reiniciada."""
+    sm = SessionStateMachine()
+    sm.to(State.PREVIEW)
+    sm.to(State.PREVIEW)                  # cada quadro reafirma o estado
+    for forbidden in (State.SLEWING, State.SOLVING, State.STACKING, State.CAPTURING):
+        assert sm.can(forbidden) is False
+    sm.to(State.STOPPED)
+
+
+def test_planetary_capture_only_starts_parked_on_the_target():
+    """Vídeo planetário: começa de parado (o alvo já está no quadro) ou depois de reconhecer o
+    céu. Nunca direto de um giro às cegas — a mesma regra de segurança do empilhamento."""
+    assert SessionStateMachine(State.IDLE).can(State.CAPTURING)
+    assert SessionStateMachine(State.SOLVING).can(State.CAPTURING)
+    assert SessionStateMachine(State.SLEWING).can(State.CAPTURING) is False
+    sm = SessionStateMachine(State.CAPTURING)
+    sm.to(State.CAPTURING)
+    sm.to(State.STACKING)                 # gravou: empilha os melhores
+    sm.to(State.IDLE)
+    assert SessionStateMachine(State.CAPTURING).can(State.SLEWING) is False, "gravando, não aponta"
+    assert State.CAPTURING.label == "capturando" and State.PREVIEW.label == "ao vivo"

@@ -1,0 +1,94 @@
+{
+ "items": [
+  {
+   "alt_deg": -57.9,
+   "dec_deg": -6.736,
+   "id": "moon",
+   "kind": "moon",
+   "name": "Lua",
+   "phase": 0.0,
+   "ra_deg": 187.02,
+   "up": false
+  },
+  {
+   "alt_deg": -30.8,
+   "dec_deg": -17.794,
+   "id": "mercury",
+   "kind": "planet",
+   "name": "Mercúrio",
+   "phase": null,
+   "ra_deg": 217.991,
+   "up": false
+  },
+  {
+   "alt_deg": -32.2,
+   "dec_deg": -21.055,
+   "id": "venus",
+   "kind": "planet",
+   "name": "Vênus",
+   "phase": null,
+   "ra_deg": 212.222,
+   "up": false
+  },
+  {
+   "alt_deg": -47.9,
+   "dec_deg": 19.781,
+   "id": "mars",
+   "kind": "planet",
+   "name": "Marte",
+   "phase": null,
+   "ra_deg": 129.207,
+   "up": false
+  },
+  {
+   "alt_deg": -59.5,
+   "dec_deg": 15.147,
+   "id": "jupiter",
+   "kind": "planet",
+   "name": "Júpiter",
+   "phase": null,
+   "ra_deg": 143.403,
+   "up": false
+  },
+  {
+   "alt_deg": 60.2,
+   "dec_deg": 1.687,
+   "id": "saturn",
+   "kind": "planet",
+   "name": "Saturno",
+   "phase": null,
+   "ra_deg": 10.779,
+   "up": true
+  },
+  {
+   "alt_deg": 9.8,
+   "dec_deg": 20.972,
+   "id": "uranus",
+   "kind": "planet",
+   "name": "Urano",
+   "phase": null,
+   "ra_deg": 63.052,
+   "up": true
+  },
+  {
+   "alt_deg": 65.6,
+   "dec_deg": -0.418,
+   "id": "neptune",
+   "kind": "planet",
+   "name": "Netuno",
+   "phase": null,
+   "ra_deg": 2.606,
+   "up": true
+  },
+  {
+   "alt_deg": -53.9,
+   "dec_deg": -6.446,
+   "id": "sun",
+   "kind": "sun",
+   "name": "Sol",
+   "phase": null,
+   "ra_deg": 195.108,
+   "up": false
+  }
+ ]
+}

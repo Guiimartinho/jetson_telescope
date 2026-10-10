@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O ícone dos avisos é pedido pelo NOME (pelo pacote de avisos), não por código: sem esta
+     linha o empacotamento de entrega o descartaria como "não usado" e os avisos sairiam sem
+     ícone (ou nem sairiam). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_telescope" />

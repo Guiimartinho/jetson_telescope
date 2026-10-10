@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GERADO por scripts/export_app_icons.py a partir de src/server/ui_kit.py. Não edite. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="32" android:viewportHeight="32">
+    <path android:pathData="M11.8,16a4.2,4.2 0 1,0 8.4,0a4.2,4.2 0 1,0 -8.4,0z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <group android:rotation="-24" android:pivotX="16" android:pivotY="16"><path android:pathData="M3,16a13,6.4 0 1,0 26,0a13,6.4 0 1,0 -26,0z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/></group>
+    <path android:pathData="M16 3v3.4M16 25.6V29M3 16h3.4M25.6 16H29" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M24.9,10a1.5,1.5 0 1,0 3,0a1.5,1.5 0 1,0 -3,0z" android:fillColor="#FFFFFFFF"/>
+</vector>

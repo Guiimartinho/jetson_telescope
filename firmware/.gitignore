@@ -1,0 +1,25 @@
+# Árvore do OnStepX (66k linhas de terceiro) — baixada pinada por scripts/fetch_onstepx.py
+components/onstepx/onstepx-src/
+
+# Biblioteca Arduino TMC2209 (terceiro) — baixada por scripts/fetch_onstepx.py
+components/tmc2209/tmc2209-src/
+
+# Artefatos do build IDF
+build/
+# cópias dos binários (diagnóstico / produto) separadas para enviar à Jetson
+build-*-bins/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# Indice do clangd (gerado pelo editor)
+.cache/
+compile_commands.json
+
+# Segredos locais (senha do AP da placa) — gerado por scripts/fetch_onstepx.py
+config/Config.local.h
+
+# Dump da flash de fábrica da placa (16MB, binário de terceiro) — lido com esptool antes
+# do 1o flash, para poder voltar ao Marlin original. Fica só na máquina de quem gravou.
+backup/

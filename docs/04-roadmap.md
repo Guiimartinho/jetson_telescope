@@ -3,6 +3,12 @@
 Cada fase tem **entregável concreto** e **critério de saída** (o que precisa funcionar para avançar).
 A filosofia: cada fase entrega algo *usável* e reduz um risco. Nunca "big bang".
 
+> Este é o roteiro do **plano original (2026-07)**. Onde o projeto está hoje, tarefa por tarefa:
+> [`TASKS.md`](../TASKS.md) e a seção "Estado atual" do [`README.md`](../README.md). O hardware
+> mudou no caminho (`32-hardware-bom.md`): onde se lê ASI585MC e montagem comercial, vale SV705 e a
+> montagem impressa com OnStepX. O app do celular tem o próprio roteiro em
+> [`app/docs/06-roadmap.md`](../app/docs/06-roadmap.md).
+
 ---
 
 ## Fase 0 — Bring-up & ambiente (bancada)

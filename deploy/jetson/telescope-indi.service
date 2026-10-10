@@ -1,0 +1,18 @@
+# Servidor INDI da montagem. Vive exatamente enquanto a placa está plugada:
+#   - sobe quando /dev/telescope-mount aparece (a regra udev pede via SYSTEMD_WANTS);
+#   - cai quando o cabo sai (BindsTo) — o cliente percebe na hora, pelo socket fechado;
+#   - volta sozinho se o indiserver morrer com a placa presente (Restart=always).
+# Quem configura a serial, conecta e envia hora/local é o nosso software (MountLink), não
+# esta unidade. __USER__/__HOME__ são preenchidos por scripts/jetson_setup_mount.sh.
+[Unit]
+Description=Telescope INDI server (OnStepX mount over USB serial)
+BindsTo=dev-telescope\x2dmount.device
+After=dev-telescope\x2dmount.device
+
+[Service]
+Type=simple
+User=__USER__
+Environment=HOME=__HOME__
+ExecStart=/usr/bin/indiserver -v indi_lx200_OnStep
+Restart=always
+RestartSec=2

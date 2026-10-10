@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A tela enquanto o app abre. Escura SEMPRE: o app é usado de noite, e um clarão branco ao
+     abrir estraga a visão noturna de quem está no escuro. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/app_bg" />
+</layer-list>

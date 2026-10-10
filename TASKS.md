@@ -48,7 +48,7 @@ Arquitetura: Ports & Adapters / Pipes & Filters / State Machine (ver `docs/11`).
 - Salvar subs FITS (opcional), metadados de sessão, e **resume**. Log estruturado.
 - **Reusar** astropy. Testes: grava/relê sessão; resume continua de onde parou.
 
-### ☐ T7 — CI (GitHub Actions)
+### T7 — CI (GitHub Actions)  *(feito — ver Milestone D+)*
 - `git init` + primeiro commit; workflow rodando `pytest -m "not hardware"` + build/ctest do C++.
 - Testes: o próprio CI (verde no push).
 
@@ -87,7 +87,7 @@ Arquitetura: Ports & Adapters / Pipes & Filters / State Machine (ver `docs/11`).
 Objetivo: validar 100% do software com ferramentas grátis + simuladores + dados reais, para só
 gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver docs/20 (checklist).
 
-### ☐ T13 — Validar a camada INDI contra os *simuladores* do INDI (sem hardware)
+### T13 — Validar a camada INDI contra os *simuladores* do INDI (sem hardware)  *(feito — docs/20)*
 - Escrever/testar `IndiCameraSource`/`IndiMount`/`IndiFocuser`/`IndiFilterWheel` contra
   `indi_simulator_ccd/telescope/focuser/filter` (grátis, vêm com o INDI). Exercita a fronteira de HW inteira.
 - Testes: adapters conectam, leem propriedades e disparam ações contra o INDI simulado.
@@ -148,7 +148,7 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
 ### ✅ T7 — CI + git  *(feito)*
 - `git init` + commit inicial (branch main, 148 arquivos). `.github/workflows/ci.yml`: pytest `-m "not
   hardware"` + CTest C++. `.gitignore` (exclui dados grandes/stacks), `requirements.txt` completo.
-- **Falta só** (quando o usuário quiser): criar o remoto GitHub e `git push` → o CI roda no push.
+- Remoto no GitHub criado; o CI roda a cada *pull request* e a cada *push* na `main`.
 
 ---
 
@@ -159,4 +159,33 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
 - 8GB deu conta da stack. **Falta (otimização):** OpenCV-CUDA (compilação de horas), engine TensorRT do YOLO.
 
 ## Milestone F — Bring-up de hardware (precisa das peças físicas)
+- **Controladora da montagem — em andamento (docs/35).** OnStepX gravado na FYSETC E4 em
+  2026-10-09. Link **automático** com a Jetson: nome fixo em qualquer porta USB, INDI que
+  sobe e cai com a placa, `MountLink` que conecta, envia hora/local e reconecta sozinho
+  (provado com reboot). Os três TMC2209 validados no hardware; gravação pela própria Jetson.
+  Falta: ligar a montagem real aos modos do painel (GOTO/agendador/rastreio ainda usam os
+  simuladores) e a calibração mecânica — passos/grau, sentido, limites — que dependem da
+  montagem impressa.
 - Captura **MIPI CSI zero-copy** (Argus/NVMM) ou USB3/INDI do IMX585; foco/solve/tracking no céu real.
+
+---
+
+## Milestone G — App do celular + API protegida  *(software feito no PC — `app/README.md`)*
+- **Feito (2026-10-09 e 10):** a API v1 (`src/api`, `run_console.py --api`: HTTPS/WSS com TLS 1.3,
+  certificado do aparelho, pareamento por QR, papéis, trabalhos acompanháveis) e o app Flutter com as
+  43 telas: conectar e parear, observar, Atlas, planejar (fila, noite autônoma, mosaico, Lua e
+  planetas), galeria e estúdio, aparelho (montagem, foco, câmera, rede, celulares, atualizações). O
+  `Controller` ganhou os modos `preview`, `focus`, `plan`, `polar` (alinhamento polar por três
+  pontos, `src/control/polar_align.py`) e `planetary` (captura planetária com o pipeline de
+  `src/planetary`). Testes: 578 Python, 143 do app, 9 do app contra o servidor de verdade.
+- **Falta, e não é tela nova:**
+  - provar num celular (QR pela câmera, cofre, GPS, WiFi do telescópio só no app, busca na rede,
+    avisos com a tela apagada);
+  - instalar a API na Jetson (`scripts/jetson_setup_api.sh`), com o dono presente e o cabo de rede
+    ligado;
+  - os adapters de verdade atrás das portas que hoje só têm o de mentira: a rede (NetworkManager,
+    `src/api/network.py`) e a atualização (`src/api/updates.py`);
+  - comandar a montagem real pelo app (depende do Milestone F: mecânica e calibração).
+- **Backlog do app:** inglês; a galeria com as capturas do próprio telescópio; "a vez de comandar"
+  entre dois celulares; e o que o inventário (`app/docs/01-funcionalidades.md`, "Como ficou") lista
+  como não feito.

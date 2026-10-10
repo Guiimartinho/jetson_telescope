@@ -1,0 +1,6 @@
+{
+ "expires_s": 300,
+ "qr_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 3 3\"><path d=\"M0 0h1v1H0z\"/></svg>",
+ "role": "operator",
+ "uri": "tele://pair?v=1&id=tele-a504&fp=pQSL7XcpS3refGEJhn4zb1aT87cZCtM-VnGoLJhzTZ8&s=MjM0NTY3ODk6Ozw9Pj9AQQ&port=443&host=testserver"
+}
