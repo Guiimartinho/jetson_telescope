@@ -28,6 +28,7 @@ class SkyObject:
     mag: float | None            # magnitude (V se houver, senão a melhor disponível)
     size_arcmin: float | None    # eixo maior aparente
     common: str = ""             # nome popular (ex.: "Whirlpool Galaxy")
+    messier: str = ""            # número Messier como se escreve (ex.: "M51"); vazio se não tem
 
     @property
     def label(self) -> str:
@@ -59,7 +60,7 @@ class Rig:
 DEFAULT_RIG = Rig(focal_mm=250.0, aperture_mm=51.0, sensor_w_mm=11.2, sensor_h_mm=6.3)
 
 _DSO_KINDS = {"Galaxy", "Nebula", "Emission Nebula", "Reflection Nebula", "Planetary Nebula",
-              "HII Ionized region", "Globular Cluster", "Open Cluster", "Cluster+Nebula",
+              "HII Ionized region", "Globular Cluster", "Open Cluster", "Star cluster + Nebula",
               "Galaxy Pair", "Galaxy Triplet", "Supernova remnant"}
 
 
@@ -96,8 +97,11 @@ def _to_obj(o) -> SkyObject | None:
         common = ""
         if ids and len(ids) > 3 and ids[3]:
             common = ids[3][0]
+        messier = ""
+        if ids and ids[0]:                                # "M031" -> "M31"
+            messier = "M" + str(int(str(ids[0]).lstrip("Mm")))
         return SkyObject(name=o.name, ra_deg=_parse_ra(o.ra), dec_deg=_parse_dec(o.dec),
-                         kind=o.type, mag=mag, size_arcmin=size, common=common)
+                         kind=o.type, mag=mag, size_arcmin=size, common=common, messier=messier)
     except Exception:
         return None
 
@@ -208,6 +212,45 @@ def altitude_deg(obj: SkyObject, lat: float, lon: float, when) -> float:
     loc = EarthLocation(lat=lat * u.deg, lon=lon * u.deg)
     c = SkyCoord(ra=obj.ra_deg * u.deg, dec=obj.dec_deg * u.deg)
     return float(c.transform_to(AltAz(obstime=when, location=loc)).alt.deg)
+
+
+def _days_since_j2000(when) -> float:
+    """Dias desde J2000.0 para um `datetime` com fuso (UTC)."""
+    return when.timestamp() / 86400.0 + 2440587.5 - 2451545.0
+
+
+def _alt_from_radec(ra_deg, dec_deg, lat: float, lon: float, when):
+    """Altitude (graus) por trigonometria esférica direta; `ra_deg`/`dec_deg` escalares ou arrays."""
+    import numpy as np
+    gmst = (280.46061837 + 360.98564736629 * _days_since_j2000(when)) % 360.0
+    hour_angle = np.radians(gmst + lon - np.asarray(ra_deg, dtype=float))
+    phi, dec = math.radians(lat), np.radians(np.asarray(dec_deg, dtype=float))
+    return np.degrees(np.arcsin(np.clip(
+        math.sin(phi) * np.sin(dec) + math.cos(phi) * np.cos(dec) * np.cos(hour_angle), -1, 1)))
+
+
+def altitudes_deg(objects, lat: float, lon: float, when):
+    """Altitude de MUITOS objetos de uma vez (NumPy). Filtra o catálogo inteiro (12 mil objetos)
+    em milissegundos, onde `altitude_deg` (astropy) levaria segundos. Sem precessão nem refração:
+    erra menos de 1 grau, o que basta para decidir visibilidade. Para UM objeto com precisão,
+    `altitude_deg` continua sendo a referência. `when`: datetime com fuso."""
+    import numpy as np
+    objects = list(objects)
+    if not objects:
+        return np.zeros(0)
+    return _alt_from_radec([o.ra_deg for o in objects], [o.dec_deg for o in objects], lat, lon, when)
+
+
+def sun_altitude_deg(lat: float, lon: float, when) -> float:
+    """Altitude do Sol (graus), fórmula de baixa precisão (~0,1 grau): serve para saber se é
+    noite. Abaixo de -12 graus o céu já está escuro o bastante para céu profundo."""
+    d = _days_since_j2000(when)
+    g = math.radians((357.528 + 0.9856003 * d) % 360.0)
+    lam = math.radians((280.460 + 0.9856474 * d) % 360.0 + 1.915 * math.sin(g) + 0.020 * math.sin(2 * g))
+    eps = math.radians(23.439 - 0.0000004 * d)
+    ra = math.degrees(math.atan2(math.cos(eps) * math.sin(lam), math.cos(lam))) % 360.0
+    dec = math.degrees(math.asin(math.sin(eps) * math.sin(lam)))
+    return float(_alt_from_radec(ra, dec, lat, lon, when))
 
 
 def visible(objects, lat: float, lon: float, when, min_alt: float = 25.0):

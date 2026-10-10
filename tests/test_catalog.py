@@ -94,3 +94,48 @@ def test_altitude_computes():
     o = cat.find("M31")
     alt = cat.altitude_deg(o, lat=-23.5, lon=-46.6, when=Time("2026-01-01T03:00:00"))
     assert -90.0 <= alt <= 90.0
+
+
+# ---- o que o app precisa do catálogo --------------------------------------
+
+@needs_ongc
+def test_load_keeps_nebulae_that_come_with_a_star_cluster():
+    """Regressão: o filtro de tipos usava "Cluster+Nebula", mas o OpenNGC escreve
+    "Star cluster + Nebula". Ficavam de fora 67 objetos — entre eles a Nebulosa de Órion."""
+    names = {o.name for o in cat.load()}
+    assert "NGC1976" in names, "M42 (Órion) tem de estar no atlas"
+    assert "NGC2239" in names, "a Roseta (NGC2244) tem de estar no atlas"
+
+
+@needs_ongc
+def test_objects_carry_their_messier_number():
+    """As pessoas procuram "M31", não "NGC0224": o número Messier vai junto com o objeto."""
+    assert cat.find("M31").messier == "M31"
+    assert cat.find("NGC224").messier == "M31"
+    andromeda = next(o for o in cat.load() if o.name == "NGC0224")
+    assert andromeda.messier == "M31"
+    assert cat.find("NGC7000").messier == "", "a maioria não tem número Messier"
+
+
+def test_many_altitudes_at_once_agree_with_astropy():
+    """A conta vetorizada (para filtrar o catálogo inteiro) fica a menos de 1 grau do astropy."""
+    from datetime import datetime, timezone
+    from astropy.time import Time
+    when = datetime(2026, 10, 9, 23, 30, tzinfo=timezone.utc)
+    objs = [cat.SkyObject("a", 10.68, 41.27, "Galaxy", 3.4, 178.0),
+            cat.SkyObject("b", 83.82, -5.39, "Nebula", 4.0, 90.0),
+            cat.SkyObject("c", 270.92, -24.38, "Nebula", 5.8, 45.0),
+            cat.SkyObject("d", 201.37, -43.02, "Galaxy", 6.8, 25.0)]
+    fast = cat.altitudes_deg(objs, -23.55, -46.63, when)
+    for o, alt in zip(objs, fast):
+        assert alt == pytest.approx(cat.altitude_deg(o, -23.55, -46.63, Time(when)), abs=1.0)
+    assert len(cat.altitudes_deg([], -23.55, -46.63, when)) == 0
+
+
+def test_sun_altitude_tells_day_from_night():
+    from datetime import datetime, timezone
+    # São Paulo (UTC-3): 15h UTC é meio-dia; 03h UTC é meia-noite
+    assert cat.sun_altitude_deg(-23.55, -46.63, datetime(2026, 10, 9, 15, 0, tzinfo=timezone.utc)) > 60
+    assert cat.sun_altitude_deg(-23.55, -46.63, datetime(2026, 10, 9, 3, 0, tzinfo=timezone.utc)) < -30
+    # equinócio de março ao meio-dia solar em Greenwich, no equador: Sol quase no zênite
+    assert cat.sun_altitude_deg(0.0, 0.0, datetime(2026, 3, 20, 12, 7, tzinfo=timezone.utc)) > 88

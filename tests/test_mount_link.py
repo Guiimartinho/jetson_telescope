@@ -208,3 +208,90 @@ def test_link_from_env_uses_the_fixed_device_name(server):
 def test_link_from_env_rejects_a_bad_site():
     with pytest.raises(ValueError, match="TELE_SITE"):
         mount_link_from_env({"TELE_MOUNT": "indi", "TELE_SITE": "aqui"})
+
+
+# ---- hora e local vindos do celular (pela API do app) ----------------------
+T1 = datetime(2031, 3, 4, 5, 6, 7, tzinfo=timezone.utc)
+RIO = (-22.9, -43.2, 10.0)
+
+
+def _indi(server, cls=IndiMount):
+    return cls(device=ONSTEP, host="127.0.0.1", port=server.port, connect_timeout=3.0,
+               serial_port="/dev/telescope-mount", baud=115200)
+
+
+def test_phone_site_and_time_reach_the_connected_mount(server):
+    link = _link(server)
+    link.poll_once()
+    assert link.update_site(RIO, now=lambda: T1) is True
+    assert server.onstep["utc"] == "2031-03-04T05:06:07"
+    assert server.onstep["site"][0] == pytest.approx(-22.9)
+    link.stop()
+
+
+def test_phone_site_without_a_mount_is_kept_and_sent_when_it_connects(server):
+    link = _link(server)
+    assert link.update_site(RIO, now=lambda: T1) is False, "ainda não há montagem para receber"
+    assert link.poll_once()["connected"] is True
+    assert server.onstep["utc"] == "2031-03-04T05:06:07"
+    assert server.onstep["site"][0] == pytest.approx(-22.9)
+    link.stop()
+
+
+def test_phone_site_arriving_while_the_link_connects_is_not_lost(server):
+    """A corrida: o link acabou de mandar o local antigo à montagem nova e ainda não a deu por
+    conectada; nesse instante chega o local do celular. Ele não pode se perder."""
+    holder = {}
+
+    class Racy(IndiMount):
+        def set_site_and_time(self, *a, **k):
+            super().set_site_and_time(*a, **k)               # o local antigo vai...
+            if not holder.get("raced"):
+                holder["raced"] = True
+                holder["link"].update_site(RIO, now=lambda: T1)    # ...e o do celular chega agora
+
+    link = holder["link"] = MountLink(lambda: _indi(server, Racy).connect(), site=SP, now=lambda: T0)
+    assert link.poll_once()["connected"] is True
+    link.poll_once()                                          # o laço seguinte conserta sozinho
+    assert server.onstep["utc"] == "2031-03-04T05:06:07"
+    assert server.onstep["site"][0] == pytest.approx(-22.9)
+    link.stop()
+
+
+def test_with_the_loop_running_only_the_link_thread_talks_to_the_mount(server):
+    """A API chama `update_site` de outra thread. Duas threads falando INDI ao mesmo tempo
+    embaralhariam as mensagens: quem envia é sempre a thread do link."""
+    import threading
+    senders = []
+
+    class Spy(IndiMount):
+        def set_site_and_time(self, *a, **k):
+            senders.append(threading.current_thread().name)
+            return super().set_site_and_time(*a, **k)
+
+    link = MountLink(lambda: _indi(server, Spy).connect(), site=SP, now=lambda: T0, period_s=5.0)
+    link.start()
+    try:
+        assert _wait(lambda: link.status()["connected"], timeout=3.0)
+        t0 = time.monotonic()
+        assert link.update_site(RIO, now=lambda: T1) is True
+        assert time.monotonic() - t0 < 2.0, "o laço é acordado na hora, não espera o próximo ciclo (5 s)"
+        assert server.onstep["utc"] == "2031-03-04T05:06:07"
+        assert set(senders) == {"mount-link"}, senders
+    finally:
+        link.stop()
+
+
+def test_a_site_the_mount_refuses_does_not_drop_the_link(server):
+    class Picky(IndiMount):
+        def set_site_and_time(self, lat, lon, *a, **k):
+            if lat == RIO[0]:
+                raise ValueError("local recusado")
+            return super().set_site_and_time(lat, lon, *a, **k)
+
+    link = MountLink(lambda: _indi(server, Picky).connect(), site=SP, now=lambda: T0)
+    link.poll_once()
+    assert link.update_site(RIO, now=lambda: T1) is False
+    st = link.poll_once()
+    assert st["connected"] is True and st["connections"] == 1, "a montagem continua conectada"
+    link.stop()

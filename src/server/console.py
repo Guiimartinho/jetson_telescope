@@ -23,6 +23,13 @@ from .studio import CATALOG as STACKS, _load_linear
 from .webview import FrameHub
 from . import ui_kit as uik
 
+try:                                        # canal em tempo real (opcional): sem a lib, a página
+    from websockets.exceptions import ConnectionClosed          # segue consultando /api/state
+    from websockets.sync.server import serve as _ws_serve
+    HAS_WS = True
+except Exception:
+    HAS_WS = False
+
 try:
     from ..core import catalog as _cat
 except Exception:
@@ -227,9 +234,14 @@ def guiding_series():
 
 
 class Console:
-    def __init__(self, hub: FrameHub, on_command=None, site=DEFAULT_SITE, mount_link=None):
+    def __init__(self, hub: FrameHub, on_command=None, site=DEFAULT_SITE, mount_link=None,
+                 allow_commands=True):
         self.hub, self.on_command, self.site = hub, on_command, site
         self.mount_link = mount_link          # link automático com a montagem real (ou None = sim)
+        # False = só leitura. Com a API protegida do app ligada, comando por HTTP aberto seria
+        # a porta dos fundos: qualquer um na rede moveria a montagem (app/docs/07-seguranca.md).
+        self.allow_commands = allow_commands
+        self.ws_port = None                   # porta do canal em tempo real (None = página consulta)
         self._img = {}
         self._lock = threading.Lock()
 
@@ -277,7 +289,13 @@ class Console:
         # a UI diz qual montagem está valendo: a real (link INDI, conectada ou não) ou a simulada
         st["mount"] = (dict(self.mount_link.status(), source="indi") if self.mount_link
                        else {"connected": False, "source": "sim"})
+        st["ws_port"] = self.ws_port          # a página abre o WebSocket aqui e para de consultar
+        st["commands"] = self.allow_commands  # False: a página mostra tudo, mas não comanda
         return st
+
+
+# ícones do app na tela inicial: Android (192/512, manifesto) e iPhone (180, apple-touch-icon)
+_APP_ICONS = {"/icon-192.png": 192, "/icon-512.png": 512, "/apple-touch-icon.png": 180}
 
 
 def _make_handler(con: Console):
@@ -304,6 +322,14 @@ def _make_handler(con: Console):
                            json.dumps({"targets": visible_targets(site=con.site)}).encode())
             elif p == "/api/state":
                 self._send(200, "application/json", json.dumps(con.state()).encode())
+            elif p == "/manifest.webmanifest":
+                self._send(200, "application/manifest+json", json.dumps(uik.manifest()).encode())
+            elif p in _APP_ICONS:
+                self._send(200, "image/png", uik.app_icon_png(_APP_ICONS[p]),
+                           {"Cache-Control": "max-age=86400"})
+            elif p == "/icon.svg":
+                self._send(200, "image/svg+xml", uik.app_icon_svg().encode(),
+                           {"Cache-Control": "max-age=86400"})
             elif p == "/api/histogram":
                 self._send(200, "application/json", json.dumps({"bins": con.histogram(q.get("key"))}).encode())
             elif p == "/api/focus":
@@ -318,6 +344,9 @@ def _make_handler(con: Console):
             elif p == "/stream.mjpg":
                 self._stream()
             elif p.startswith("/api/cmd/"):
+                if not con.allow_commands:
+                    self._send(403, "application/json", b'{"ok":false,"error":"commands_disabled"}')
+                    return
                 if con.on_command:
                     con.on_command(p[len("/api/cmd/"):])
                 self._send(200, "application/json", b'{"ok":true}')
@@ -341,12 +370,41 @@ def _make_handler(con: Console):
 
 
 class ConsoleServer:
+    """O console na rede. Além da porta principal:
+
+    * `extra_ports` — as mesmas páginas em outras portas (na Jetson, a 80, para o endereço ser
+      só `telescopio.local`). Uma porta que não abre (sem permissão, ocupada) só gera aviso.
+    * `ws_port` — canal em tempo real: a Jetson EMPURRA o estado por WebSocket e recebe
+      comandos por ele. `None` (ou sem a lib `websockets`) = a página segue consultando.
+    """
+
     def __init__(self, hub: FrameHub, host="0.0.0.0", port=8080, on_command=None, site=DEFAULT_SITE,
-                 mount_link=None):
-        self.console = Console(hub, on_command=on_command, site=site, mount_link=mount_link)
-        self.httpd = ThreadingHTTPServer((host, port), _make_handler(self.console))
+                 mount_link=None, ws_port=None, extra_ports=(), allow_commands=True):
+        self.console = Console(hub, on_command=on_command, site=site, mount_link=mount_link,
+                               allow_commands=allow_commands)
+        handler = _make_handler(self.console)
+        self.httpd = ThreadingHTTPServer((host, port), handler)
         self.httpd.daemon_threads = True
-        self.host, self.port = host, port
+        self.host, self.port = host, self.httpd.server_address[1]
+        self._extra, self.extra_ports = [], []
+        for p in extra_ports:
+            try:
+                httpd = ThreadingHTTPServer((host, p), handler)
+            except OSError as e:
+                print(f">> console: porta extra {p} indisponível ({e}); sigo sem ela")
+                continue
+            httpd.daemon_threads = True
+            self._extra.append(httpd)
+            self.extra_ports.append(httpd.server_address[1])
+        self._ws, self.ws_port = None, None
+        if ws_port is not None and HAS_WS:
+            try:
+                self._ws = _ws_serve(self._ws_handler, host, ws_port)
+                self.ws_port = self._ws.socket.getsockname()[1]
+            except OSError as e:
+                print(f">> console: canal em tempo real indisponível ({e}); a página vai consultar")
+        self.console.ws_port = self.ws_port
+        self._serving = False
 
     def serve_forever(self):
         self.httpd.serve_forever()
@@ -355,12 +413,62 @@ class ConsoleServer:
         # aquece catálogo + astropy em paralelo: o Atlas é a 1ª aba que o usuário abre no campo
         threading.Thread(target=warm_cache, args=(self.console.site,), daemon=True).start()
         threading.Thread(target=self.serve_forever, daemon=True).start()
+        for httpd in self._extra:
+            threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        if self._ws is not None:
+            threading.Thread(target=self._ws.serve_forever, daemon=True).start()
+        self._serving = True
 
     def stop(self):
+        for httpd in [self.httpd, *self._extra]:
+            try:
+                if self._serving:                  # shutdown() trava se o laço nunca rodou
+                    httpd.shutdown()
+                httpd.server_close()
+            except Exception:
+                pass
+        if self._ws is not None:
+            try:
+                self._ws.shutdown()
+            except Exception:
+                pass
+        self._serving = False
+
+    # ---------------------------------------------------- canal em tempo real
+    def _ws_handler(self, ws):
+        """Uma conexão do canal: empurra o estado quando ele muda e recebe comandos.
+
+        O laço acorda na hora quando o hub muda (frame novo, troca de estado) e, sem mudança,
+        a cada 0,1 s — para ler comandos do cliente e notar o que não passa pelo hub (a
+        montagem conectou/desconectou). O envio é limitado a ~10 mensagens por segundo."""
+        con, hub = self.console, self.console.hub
+        last, version, next_send = None, -1, 0.0
         try:
-            self.httpd.shutdown()
-        except Exception:
+            while True:
+                version = hub.wait_change(version, timeout=0.1)
+                while True:                                    # comandos, sem bloquear
+                    try:
+                        raw = ws.recv(timeout=0)
+                    except TimeoutError:
+                        break
+                    self._ws_command(raw)
+                now = time.monotonic()
+                if now >= next_send:
+                    msg = json.dumps(con.state())
+                    if msg != last:
+                        ws.send(msg)
+                        last, next_send = msg, now + 0.1
+        except ConnectionClosed:
             pass
+
+    def _ws_command(self, raw):
+        """`{"cmd": "start:stack"}` -> a mesma fila do /api/cmd. Lixo é ignorado."""
+        try:
+            cmd = json.loads(raw).get("cmd")
+        except (ValueError, AttributeError, TypeError):
+            return
+        if isinstance(cmd, str) and cmd and self.console.on_command and self.console.allow_commands:
+            self.console.on_command(cmd)
 
 
 # ================================================================= a página (SPA)
@@ -390,7 +498,7 @@ _ICONS_JS = json.dumps({n: uik.icon(n, 20) for n in
 
 _PAGE_CSS = """
 #app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;position:relative;background:var(--bg)}
-.top{display:flex;align-items:center;justify-content:space-between;padding:11px 16px 9px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:calc(11px + env(safe-area-inset-top)) 16px 9px}
 .top .st{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:2px 8px;font:600 10.5px var(--mono);color:var(--mut);letter-spacing:.04em}
 .top .st .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .top .st b{color:var(--gold)}
@@ -463,6 +571,11 @@ svg.plot{width:100%;display:block}
 _TEMPLATE = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#04060c"><meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Telescópio">
 <title>Jetson Telescopio</title><style>__CSS__</style></head><body>
 <div id="app">
  <div class="top">__BRAND__<div class="st"><span class="dot"></span><span id="backend">—</span> · <b id="mode">IDLE</b> · <span id="mount">montagem —</span></div></div>
@@ -506,17 +619,19 @@ const CHK='<svg class="ic" viewBox="0 0 24 24" width="13" height="13" style="dis
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('on'),1600);}
 function go(t){for(const s of['live','atlas','pro']){$('tab-'+s).classList.toggle('on',s===t);const n=$('nav-'+s);if(n)n.classList.toggle('on',s===t);}
   $('dock').style.display=t==='live'?'flex':'none';if(t==='pro')loadPro();if(t==='atlas')renderAtlas();}
-function cmd(a,msg){fetch('/api/cmd/'+encodeURIComponent(a));if(msg)toast(msg);}
-function dock(a){if(a==='goto')cmd('start:goto:'+cur.desig,'GOTO '+cur.desig);else if(a==='focus')cmd('start:autofind:'+cur.desig,'Autofoco');else if(a==='atlas')go('atlas');else if(a==='stop'){stacking=false;setStack(false);cmd('stop','Parado');}}
+// RO: console só leitura (a API protegida do app está ligada; comando por HTTP aberto, não).
+let RO=false;const RO_MSG='Comandos só pelo app (canal protegido)';
+function cmd(a,msg){if(RO){toast(RO_MSG);return false;}fetch('/api/cmd/'+encodeURIComponent(a));if(msg)toast(msg);return true;}
+function dock(a){if(RO&&a!=='atlas'){toast(RO_MSG);return;}if(a==='goto')cmd('start:goto:'+cur.desig,'GOTO '+cur.desig);else if(a==='focus')cmd('start:autofind:'+cur.desig,'Autofoco');else if(a==='atlas')go('atlas');else if(a==='stop'){stacking=false;setStack(false);cmd('stop','Parado');}}
 function setStack(on){stacking=on;$('d_cap').classList.toggle('run',on);
   document.querySelector('#d_cap .g').innerHTML=on
     ?'<svg class="ic" viewBox="0 0 24 24" width="24" height="24"><rect class="f" x="6.5" y="6.5" width="11" height="11" rx="2.4"/></svg>'
     :'<svg class="ic" viewBox="0 0 24 24" width="24" height="24"><circle class="f" cx="12" cy="12" r="6.5"/></svg>';
   $('ovr').style.display=on?'flex':'none';}
-function toggleStack(){stacking=!stacking;if(stacking){cmd('start:stack:'+cur.desig,'Empilhando '+cur.desig);$('live').src='/stream.mjpg?'+Date.now();}
+function toggleStack(){if(RO){toast(RO_MSG);return;}stacking=!stacking;if(stacking){cmd('start:stack:'+cur.desig,'Empilhando '+cur.desig);$('live').src='/stream.mjpg?'+Date.now();}
   else{cmd('stop','Parado');$('live').src='/image/'+(cur.img||'lagoon_trifid')+'?'+Date.now();}setStack(stacking);}
 function selectTarget(t){cur=t;$('ovt').innerHTML='<b>'+t.desig+'</b> <span>· '+t.name+'</span>';
-  if(!stacking)$('live').src='/image/'+(t.img||t.desig)+'?'+Date.now();go('live');cmd('start:goto:'+t.desig,'GOTO '+t.desig);
+  if(!stacking)$('live').src='/image/'+(t.img||t.desig)+'?'+Date.now();go('live');if(!cmd('start:goto:'+t.desig,'GOTO '+t.desig))return;
   $('p_solve').textContent='—';$('solvetxt').innerHTML='<small>resolvendo…</small>';
   setTimeout(()=>{$('p_solve').textContent='0.4 s';$('solvetxt').innerHTML='<span class="ok">'+CHK+' resolvido</span> <small>'+t.desig+'</small>';},1300);}
 function chipsHTML(){$('chips').innerHTML='';CATS.forEach(([c,ic])=>{const b=document.createElement('div');b.className='chip'+(c===filt?' on':'');
@@ -551,7 +666,16 @@ async function drawHist(){let b=[];try{b=(await(await fetch('/api/histogram'+(cu
 function loadPro(){drawFoc();drawGuide();drawHist();}
 // ---- telemetria ----
 const MC={IDLE:'#8492b0',SLEWING:'#33ddc4',SOLVING:'#33ddc4',FOCUSING:'#f5b95c',STACKING:'#49d17e',SCHEDULING:'#9aa2ff',TRACKING:'#f5b95c',ERROR:'#ff5d6c',STOPPED:'#8492b0'};
-async function poll(){try{const s=await(await fetch('/api/state')).json();const m=$('mode');m.textContent=s.state||'IDLE';m.style.color=MC[s.state]||'#f5b95c';
+// Canal em tempo real: com o WebSocket aberto a Jetson EMPURRA o estado e a página para de
+// consultar. Se ele cair (ou não existir), a consulta a cada 0,9 s volta e tenta reabrir.
+let ws=null,wsUp=false,lastHist=0;
+function openWs(port){try{ws=new WebSocket('ws://'+location.hostname+':'+port);}catch(e){ws=null;return;}
+  ws.onopen=()=>{wsUp=true;};ws.onmessage=e=>{try{apply(JSON.parse(e.data));}catch(_){}};
+  ws.onclose=()=>{wsUp=false;ws=null;};ws.onerror=()=>{try{ws.close();}catch(_){}};}
+async function poll(){if(wsUp)return;try{const s=await(await fetch('/api/state')).json();apply(s);if(s.ws_port&&!ws)openWs(s.ws_port);}catch(e){}}
+function apply(s){try{RO=s.commands===false;$('dock').style.opacity=RO?'.45':'';
+  const m=$('mode');m.textContent=s.state||'IDLE';m.style.color=MC[s.state]||'#f5b95c';
+  document.querySelector('.top .st .dot').title=wsUp?'tempo real':'consultando';
   $('backend').textContent=(s.backend||'').indexOf('GPU')>=0?'GPU':'CPU';const run=s.state==='STACKING';
   const mt=s.mount||{},me=$('mount'),real=mt.source==='indi';
   me.textContent=real?(mt.connected?'montagem conectada':'montagem desconectada'):'montagem simulada';
@@ -561,7 +685,7 @@ async function poll(){try{const s=await(await fetch('/api/state')).json();const 
   const sub=s.accepted||0;$('t_snr').innerHTML=(s.snr?s.snr.toFixed(1):'—')+'<span>SNR</span>';$('t_fwhm').innerHTML=(s.fwhm?s.fwhm.toFixed(1)+'″':'—')+'<span>FWHM</span>';
   $('t_sub').innerHTML=sub+'<span>SUBS</span>';$('t_int').innerHTML=(sub*30>=60?Math.round(sub*30/60)+'min':sub*30+'s')+'<span>INTEGRADO</span>';
   $('t_exp').innerHTML='30s<span>EXP</span>';$('t_gain').innerHTML='120<span>GANHO</span>';
-  if($('tab-pro').classList.contains('on'))drawHist();
+  if($('tab-pro').classList.contains('on')&&Date.now()-lastHist>900){lastHist=Date.now();drawHist();}
 }catch(e){}}
 $('ovt').innerHTML='<b>M8</b> <span>· Lagoa</span>';chipsHTML();loadTargets();setStack(false);setInterval(poll,900);poll();
 </script></body></html>"""

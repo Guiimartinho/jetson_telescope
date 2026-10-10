@@ -46,12 +46,15 @@ class Session:
         self.filterwheel = filterwheel
         self.last_solution = None          # (cx, cy, rot) do último plate solve (p/ WCS)
         self.stop = False
+        self.skip = False                  # pula o alvo atual do plano (a noite segue)
+        self.pace = True                   # pausas "para ver ao vivo" (os testes desligam)
         self.sm = SessionStateMachine()
         self.stats = dict(backend=backend_name(), reuse_astroalign=HAS_ASTROALIGN,
                           phase=State.IDLE.label, state=State.IDLE.name,
                           accepted=0, rejected=0, fwhm=0.0, snr=0.0,
                           error_px=0.0, focus_pos=0,
-                          target="", queue_done=0, queue_total=0, filter="")
+                          target="", queue_done=0, queue_total=0, filter="",
+                          job=None, outcome="")       # de qual comando é o estado; como terminou
 
     # ------------------------------------------------------------------ infra
     def _set_state(self, st: State):
@@ -79,11 +82,17 @@ class Session:
         STOPPED é terminal, então trocar de modo exige uma máquina nova."""
         self.sm = SessionStateMachine()
         self.stop = False
+        self.skip = False
         self.last_solution = None
         self.stats.update(phase=State.IDLE.label, state=State.IDLE.name,
                           accepted=0, rejected=0, snr=0.0, error_px=0.0, err_unit="px",
-                          target="", queue_done=0, queue_total=0)
+                          target="", queue_done=0, queue_total=0, outcome="")
         self._publish()          # reflete o IDLE no painel imediatamente
+
+    def _pace(self, seconds: float):
+        """Ritmo para dar tempo de ver ao vivo — só quando há quem assista (live view)."""
+        if self.hub is not None and self.pace:
+            time.sleep(seconds)
 
     def _get_source(self):
         if self.source is None:
@@ -127,6 +136,8 @@ class Session:
             if self.stop:
                 self._set_state(State.STOPPED)
                 return False
+            if self.skip:                               # pular este alvo: a noite segue
+                return False
             frame, _ = src.read()
             sol = self.solver.solve(frame) if self.solver is not None else None
             if sol is None:
@@ -142,32 +153,60 @@ class Session:
                 return True
             if self.mount is not None:
                 self.mount.nudge(-ex, -ey)              # correção fina
-            if self.hub is not None:
-                time.sleep(0.25)                        # ritmo p/ ver ao vivo (só com live view)
+            self._pace(0.25)                            # ritmo p/ ver ao vivo (só com live view)
         print("[auto-find] X nao convergiu")
         return False
 
     # -------------------------------------------------------------- FASE 2 (D)
-    def autofocus(self):
+    def autofocus(self) -> bool:
+        """Varre o focalizador e vai ao foco crítico. Publica a CURVA (posição, FWHM) conforme
+        mede — é o que a tela de foco do app desenha. Devolve False se não achou foco (sem
+        estrelas, fim de curso): quem chamou decide o que fazer com isso."""
         if self.focuser is None:
-            return
+            return False
         src = self._get_source()
         self._set_state(State.FOCUSING)
+        self.stats.update(focus_curve=[], focus_best=None)
         print("\n[autofoco] varrendo o focalizador…")
 
         def _prog(pos, fwhm, frame):
-            self.stats.update(focus_pos=int(pos),
-                              fwhm=round(fwhm, 2) if np.isfinite(fwhm) else 0.0)
+            ok = bool(np.isfinite(fwhm))
+            # lista NOVA a cada ponto: o hub guarda uma cópia rasa do estado
+            curve = self.stats.get("focus_curve", []) + [[int(pos), round(float(fwhm), 2) if ok else None]]
+            self.stats.update(focus_pos=int(pos), fwhm=round(fwhm, 2) if ok else 0.0,
+                              focus_curve=curve)
             self._publish(frame)
             print(f"[autofoco] pos={pos:5d}  FWHM={fwhm:.2f}")
-            if self.hub is not None:
-                time.sleep(0.18)                        # ritmo p/ ver ao vivo (só com live view)
+            self._pace(0.18)                            # ritmo p/ ver ao vivo (só com live view)
 
         af = AutoFocuser(src, self.focuser, self.cfg.quality)
-        best, achieved, _ = af.run(progress=_prog, should_stop=lambda: self.stop)
-        self.stats.update(focus_pos=int(best),
-                          fwhm=round(achieved, 2) if np.isfinite(achieved) else 0.0)
-        print(f"[autofoco] OK foco critico em {best} (FWHM {achieved:.2f})")
+        best, achieved, _ = af.run(progress=_prog,
+                                   should_stop=lambda: self.stop or self.skip)
+        found = bool(np.isfinite(achieved))
+        self.stats.update(focus_pos=int(best), focus_best=int(best) if found else None,
+                          fwhm=round(achieved, 2) if found else 0.0)
+        print(f"[autofoco] {'OK foco critico' if found else 'X sem foco'} em {best} (FWHM {achieved:.2f})")
+        return found
+
+    # ------------------------------------------------------------ prévia ao vivo
+    def run_preview(self, fps: float = 5.0):
+        """A câmera ao vivo, SEM empilhar: enquadrar, focar à mão, conferir o céu. Cada quadro
+        sai com a nitidez medida (FWHM), para o foco manual ter um número para olhar."""
+        src = self._get_source()
+        self._set_state(State.PREVIEW)
+        while not self.stop:
+            self._poll_commands()
+            raw, _ = src.read()
+            frame = _debayer.debayer(raw, src.bayer) if getattr(src, "is_color", False) else raw
+            q = assess(asnumpy(_to_gray(frame)), self.cfg.quality)
+            self.stats.update(fwhm=round(q["fwhm"], 2) if np.isfinite(q["fwhm"]) else 0.0,
+                              n_stars=int(q["n_stars"]), focus_pos=(
+                                  int(self.focuser.position()) if self.focuser is not None
+                                  else self.stats.get("focus_pos", 0)))
+            self._publish(frame)
+            time.sleep(1.0 / fps)
+        if self.sm.state is not State.STOPPED:
+            self._set_state(State.STOPPED)
 
     # ----------------------------------------------------------- laço de stack
     def run_stack(self, frames=None, label=""):
@@ -190,9 +229,9 @@ class Session:
 
         i = 0
         t0 = time.time()
-        while not self.stop and (n_frames == 0 or i < n_frames):
+        while not (self.stop or self.skip) and (n_frames == 0 or i < n_frames):
             self._poll_commands()
-            if self.stop:
+            if self.stop or self.skip:
                 break
             raw, _ = src.read(out=ring.acquire())
             frame = _debayer.debayer(raw, src.bayer) if getattr(src, "is_color", False) else raw

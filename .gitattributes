@@ -3,3 +3,11 @@
 *.sh text eol=lf
 # Regras udev e unidades systemd instaladas na Jetson: idem.
 deploy/** text eol=lf
+
+# Arquivos GERADOS e conferidos byte a byte (scripts/export_app_icons.py e
+# scripts/export_api_fixtures.py, por tests/test_app_contract.py): sempre LF. Com
+# core.autocrlf=true um checkout no Windows os traria com CRLF e a conferência falharia.
+app/assets/** text eol=lf
+app/test/fixtures/** text eol=lf
+app/lib/core/icons.g.dart text eol=lf
+app/android/app/src/main/res/drawable/ic_stat_telescope.xml text eol=lf

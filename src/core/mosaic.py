@@ -24,6 +24,29 @@ def panel_centers(cx, cy, rows, cols, step_px):
     return panels
 
 
+def panel_grid_radec(ra_deg, dec_deg, rows, cols, fov_deg, overlap=0.15):
+    """A grade no CÉU: centro (RA/DEC, graus) de cada painel de um mosaico `rows`×`cols` sobre
+    o alvo, com `overlap` (fração do campo) de sobreposição entre vizinhos — é ela que deixa
+    costurar depois. A linha 0 é a do norte; a coluna 0, a do leste (RA maior).
+
+    Devolve (painéis, cobertura): a cobertura é o tamanho total fotografado (largura, altura).
+    """
+    import math
+    fov_w, fov_h = fov_deg
+    step_w, step_h = fov_w * (1.0 - overlap), fov_h * (1.0 - overlap)
+    cos_dec = max(math.cos(math.radians(dec_deg)), 1e-3)      # perto do polo o RA "estica"
+    panels = []
+    for r in range(rows):
+        for c in range(cols):
+            d_dec = ((rows - 1) / 2.0 - r) * step_h
+            d_ra = ((cols - 1) / 2.0 - c) * step_w / cos_dec
+            panels.append({"name": f"R{r}C{c}", "row": r, "col": c,
+                           "ra_deg": round((ra_deg + d_ra) % 360.0, 4),
+                           "dec_deg": round(max(-90.0, min(90.0, dec_deg + d_dec)), 4)})
+    covers = (round(fov_w + (cols - 1) * step_w, 3), round(fov_h + (rows - 1) * step_h, 3))
+    return panels, covers
+
+
 def stitch_siril(fits_paths, out_path):
     """Costura os painéis com Siril headless (reuso). Sem Siril, pula com mensagem clara.
 

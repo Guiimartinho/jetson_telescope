@@ -1,0 +1,18 @@
+# Apelido na rede: telescopio.local aponta para os IPs desta máquina (ela não muda de nome).
+# PartOf: se o avahi reiniciar, este serviço reinicia junto e republica o apelido.
+# __USER__/__REPO__ são preenchidos por scripts/jetson_setup_app.sh.
+[Unit]
+Description=Telescope mDNS alias (telescopio.local)
+After=avahi-daemon.service
+Requires=avahi-daemon.service
+PartOf=avahi-daemon.service
+
+[Service]
+Type=simple
+User=__USER__
+ExecStart=/usr/bin/python3 __REPO__/deploy/jetson/telescope_mdns_alias.py telescopio
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

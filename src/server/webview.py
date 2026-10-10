@@ -16,16 +16,27 @@ from . import ui_kit as uik
 class FrameHub:
     """Estado compartilhado thread-safe entre o pipeline e o servidor web (frames, stats, comandos)."""
     def __init__(self):
-        self._lock = threading.Lock()
+        self._lock = threading.Condition()      # também acorda quem espera uma mudança
         self._jpeg = None
         self._stats = {}
         self._cmds = []
+        self._version = 0
 
     def update(self, jpeg: bytes, stats: dict):
         with self._lock:
             if jpeg:
                 self._jpeg = jpeg
             self._stats = dict(stats)
+            self._version += 1
+            self._lock.notify_all()
+
+    def wait_change(self, since: int, timeout: float = 1.0) -> int:
+        """Bloqueia até o estado mudar depois da versão `since` (ou até o timeout) e devolve
+        a versão atual. É o que deixa o servidor EMPURRAR o estado em vez de ser consultado."""
+        with self._lock:
+            if self._version == since:
+                self._lock.wait(timeout)
+            return self._version
 
     def get(self):
         with self._lock:
