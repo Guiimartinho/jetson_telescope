@@ -32,19 +32,25 @@ def build() -> dict[str, object]:
 
     from src import backend
     from src.api import app as api
+    from src.api import sky
     from src.api.identity import DeviceIdentity, b64u, b64u_decode
     from src.api.pairing import PairingService, pairing_proof
     from src.core import catalog as cat
     from src.server.webview import FrameHub
 
     real_backend, real_cache = backend.backend_name, dict(api._SYS_CACHE)
+    real_sky_image = sky._sky_image
     backend.backend_name = lambda: "CuPy/GPU (Orin)"
     api._SYS_CACHE.update(t=float("inf"), v={"temp_c": 41.5, "disk_free_gb": 200.1})
+    # As imagens do céu são baixadas e ficam fora do git: num clone novo (o do CI) não existem.
+    # O mundo das respostas gravadas é fixo: há imagem de M42, e de mais nenhum alvo avulso.
+    sky._sky_image = lambda tid: tid == "M42"
     try:
         return _build(api, DeviceIdentity, PairingService, FrameHub, TestClient, b64u, b64u_decode,
                       pairing_proof, cat)
     finally:                                      # este script também roda dentro dos testes
         backend.backend_name = real_backend
+        sky._sky_image = real_sky_image
         api._SYS_CACHE.clear()
         api._SYS_CACHE.update(real_cache)
 
@@ -194,6 +200,16 @@ def _build(api, DeviceIdentity, PairingService, FrameHub, TestClient, b64u, b64u
     return out
 
 
+def _difference(path: Path, text: str, limit: int = 12) -> str:
+    """As primeiras linhas em que o arquivo gravado difere do que a API responde agora."""
+    import difflib
+    old = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    diff = [line for line in difflib.unified_diff(old, text.splitlines(), "gravado", "agora", lineterm="", n=0)
+            if not line.startswith(("---", "+++", "@@"))]
+    more = [f"  ... e mais {len(diff) - limit} linha(s)"] if len(diff) > limit else []
+    return "\n".join([f"  {path.name}:"] + [f"    {line}" for line in diff[:limit]] + more)
+
+
 def main(argv=None) -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -202,19 +218,23 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true", help="não grava; falha se algo estiver desatualizado")
     a = ap.parse_args(argv)
-    stale = []
+    stale, changed = [], []
     for name, data in build().items():
         path = OUT / f"{name}.json"
         text = json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
         if path.exists() and path.read_text(encoding="utf-8") == text:
             continue
         stale.append(path)
-        if not a.check:
+        if a.check:
+            changed.append(_difference(path, text))
+        else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8", newline="\n")
     verb = "desatualizado" if a.check else "gravado"
     for p in stale:
         print(f"{verb}: {p.relative_to(ROOT)}")
+    for lines in changed:                             # o QUE mudou: sem isto, um CI vermelho não diz nada
+        print(lines)
     print(f"{len(stale)} arquivo(s) {verb}(s)")
     return 1 if (a.check and stale) else 0
 

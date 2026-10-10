@@ -86,13 +86,19 @@ def _fits(obj, rig) -> bool | None:
     return 0.03 * fov_min <= obj.size_arcmin <= 0.9 * fov_min
 
 
+def _sky_image(tid: str) -> bool:
+    """Há uma imagem do céu baixada para este alvo? Elas ficam em `data/`, fora do git: existem
+    na máquina de quem já as baixou, e não num clone novo."""
+    return os.path.exists(f"data/sky_{tid}.jpg")
+
+
 def thumb_key(obj) -> str | None:
     """Chave de imagem do alvo (as mesmas do console), se houver imagem. A chave sai do
     identificador do CATÁLOGO, nunca do texto recebido: nada de fora vira nome de arquivo."""
     tid = target_id(obj)
     if tid in _STACK_OF:
         return _STACK_OF[tid]
-    if _ID.fullmatch(tid) and os.path.exists(f"data/sky_{tid}.jpg"):
+    if _ID.fullmatch(tid) and _sky_image(tid):
         return "@sky:" + tid
     return None
 

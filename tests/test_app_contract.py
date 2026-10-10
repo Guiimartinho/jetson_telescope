@@ -33,6 +33,20 @@ def test_app_fixtures_are_what_the_api_really_answers(capsys):
                        + capsys.readouterr().out)
 
 
+def test_fixtures_do_not_depend_on_files_outside_git(capsys, monkeypatch):
+    """Num clone novo (o do CI) não existe `data/`: as imagens do céu são baixadas e ficam fora
+    do git. As respostas gravadas não podem mudar por causa disso — a ficha de um alvo dizia
+    "tem miniatura" só na máquina de quem já tinha a imagem."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("cryptography")
+    import os
+    real = os.path.exists
+    monkeypatch.setattr(os.path, "exists",
+                        lambda p: False if str(p).replace("\\", "/").startswith("data/") else real(p))
+    code = _script("export_api_fixtures").main(["--check"])
+    assert code == 0, capsys.readouterr().out
+
+
 def test_app_icons_come_from_the_ui_kit(capsys):
     code = _script("export_app_icons").main(["--check"])
     assert code == 0, ("ícones desatualizados: rode `py -3.11 scripts/export_app_icons.py`\n"
