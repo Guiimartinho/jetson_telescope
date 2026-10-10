@@ -4,18 +4,48 @@
 > processamento de borda **~30× mais poderoso**, usando GPU CUDA/TensorRT para *live stacking*,
 > *lucky imaging* e rastreamento em tempo real que os SoCs ARM desses produtos não conseguem fazer.
 
-Status: **fase de planejamento / arquitetura** (pré-código). Data-base do plano: 2026-07.
+Status (2026-10-10): **o software existe e está testado; o hardware está sendo montado.** O
+pipeline, o console, a API e o app do celular rodam contra simuladores e dados reais; a Jetson
+roda tudo com GPU; a controladora da montagem está gravada e ligada a ela. Faltam a câmera e a
+mecânica para o primeiro céu de verdade. O plano original é de 2026-07 (seções 2 a 4).
 
 ---
+
+## 0. Estado atual (2026-10-10)
+
+| Parte | Estado |
+|---|---|
+| **Pipeline de imagem** (`src/gpu`, `src/core`, `src/postproc`) | *live stacking* em float32 com rejeição por qualidade, calibração, registro, FITS/WCS, mosaico, agendador, noite autônoma, rastreamento, modo planetário (*lucky imaging*) e o estúdio de acabamento. Roda em NumPy no PC e em CuPy na GPU. Validado com dados reais (M67 e os datasets do estúdio) |
+| **Jetson Orin Nano Super 8GB** | *bring-up* feito (`docs/28`): suíte verde na GPU, painel e estúdio pelo celular, INDI real. **A API do app ainda não foi instalada nela** |
+| **Montagem** | controladora FYSETC E4 com OnStepX gravada e validada; link USB automático com a Jetson (`docs/35`). **A mecânica não está montada:** GOTO, agendador, rastreio e alinhamento polar usam simuladores |
+| **Câmera** | **ainda não há** (SV705 / IMX585 planejada, `docs/32`): as imagens ao vivo vêm do simulador |
+| **Console web** (`run_console.py`) | Live / Atlas / Pro, catálogo real de ~14 mil objetos, pronto para o campo sem internet (`docs/33`, `docs/34`). Com a API ligada ele vira só leitura |
+| **API do app** (`src/api`) | HTTPS e WSS com TLS 1.3, pareamento por QR, papéis, e todas as rotas que o app usa. Testada no PC (`app/docs/04-api.md`) |
+| **App do celular** (`app/`) | Flutter, Android primeiro: 43 telas, modo demonstração, APK compila. **Nunca rodou num celular** (`app/README.md`) |
+| **Testes** | 577 em Python (rodam no CI do GitHub, sem GPU nem hardware), 143 do app, e 9 do app contra o servidor de verdade |
+
+**O que é de verdade e o que é simulado.** São de verdade: o processamento de imagem, o catálogo,
+o estúdio, a segurança da API e o link com a placa da montagem. São simulados, e as telas dizem
+isso: a câmera, o apontamento, o focalizador e o movimento da montagem. Trocar de rede e
+atualizar pelo app têm o contrato pronto, com adapters de mentira; os de verdade entram na
+Jetson com o dono presente.
+
+**Para onde olhar.** O plano de execução e o que falta: [`TASKS.md`](TASKS.md). O histórico:
+[`CHANGELOG.md`](CHANGELOG.md). O app: [`app/README.md`](app/README.md).
 
 ## 1. Visão em uma frase
 
 Capturar céu profundo (Andrômeda, nebulosas, galáxias), Lua, planetas e objetos rápidos (ISS/satélites)
 com um pipeline **100% na borda** (sem nuvem), fazendo empilhamento ao vivo em ponto flutuante 32 bits
 na memória da Jetson, com autofoco, *plate solving* e rastreamento local — expondo o frame empilhado
-em tempo real para uma UI web via WebSocket.
+em tempo real para uma UI web e para o app do celular, por canal cifrado.
 
 ## 2. Benchmark — o que estamos superando
+
+> Esta seção e as duas seguintes são o **plano original (2026-07)**. O hardware que está sendo
+> construído é o de [`docs/32-hardware-bom.md`](docs/32-hardware-bom.md): montagem
+> OpenAstroExplorer impressa, com OnStepX numa FYSETC E4, câmera SV705 (IMX585) e a Jetson Orin
+> Nano Super 8GB.
 
 | | **DWARFLAB DWARF 3** | **ZWO Seestar S50** | **Este projeto (alvo)** |
 |---|---|---|---|
@@ -95,6 +125,12 @@ são armadilhas que travam meses sem serem o diferencial. Por isso:
 | [`docs/33-console-campo.md`](docs/33-console-campo.md) | ⭐ **Console de campo (UI de produto Live/Atlas/Pro, estilo DWARF+ASIAIR): webpage no celular via WiFi, catálogo+telemetria reais — `run_console.py` (8080)** |
 | [`docs/34-campo-offline-e-arranque.md`](docs/34-campo-offline-e-arranque.md) | ⭐ **Prontidão de campo: Atlas 78,8s→3s, astropy 100% offline (sem IERS pela rede), `dialout`** |
 | [`docs/35-firmware-onstepx-idf.md`](docs/35-firmware-onstepx-idf.md) | ⭐ **Firmware da montagem: OnStepX (ESP-IDF 6) na FYSETC E4, gravado e validado — link serial automático com a Jetson (`/dev/telescope-mount`, INDI, hora/local, reconexão), drivers TMC conferidos no hardware** |
+| [`app/README.md`](app/README.md) | **App do celular (Flutter, Android primeiro): estado, como rodar e testar, e o projeto completo (funcionalidades, telas, conexão, API, segurança, roteiro)** |
+| [`app/docs/04-api.md`](app/docs/04-api.md) | **API v1 da Jetson para o app (`src/api`, `run_console.py --api`): HTTPS/WSS na 8443, TLS 1.3, pareamento por QR — contrato e como ficou** |
+| [`app/docs/07-seguranca.md`](app/docs/07-seguranca.md) | **Segurança da comunicação celular ↔ Jetson: canal cifrado, certificado fixado, pareamento, tokens, comando do dono** |
+| [`app/docs/03-conexao.md`](app/docs/03-conexao.md) | Como o app acha e alcança a Jetson: rede de casa e de campo, descoberta, hora e local vindos do celular |
+| [`app/docs/08-telas.md`](app/docs/08-telas.md) | As 43 telas do app: o que mostram, ações e estados, e como cada uma ficou |
+| [`CHANGELOG.md`](CHANGELOG.md) | Tudo o que mudou, por data, com o que foi provado e o que não foi |
 | [`TASKS.md`](TASKS.md) | ⭐ **Plano de execução: Fase 1→4 + Milestones D/E/F (fechar software antes da câmera)** |
 
 ---
