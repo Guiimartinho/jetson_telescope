@@ -177,7 +177,7 @@ gastar dinheiro na câmera depois que o risco de software estiver zerado. Ver do
   planetas), galeria e estúdio, aparelho (montagem, foco, câmera, rede, celulares, atualizações). O
   `Controller` ganhou os modos `preview`, `focus`, `plan`, `polar` (alinhamento polar por três
   pontos, `src/control/polar_align.py`) e `planetary` (captura planetária com o pipeline de
-  `src/planetary`). Testes: 577 Python, 143 do app, 9 do app contra o servidor de verdade.
+  `src/planetary`). Testes: 578 Python, 143 do app, 9 do app contra o servidor de verdade.
 - **Falta, e não é tela nova:**
   - provar num celular (QR pela câmera, cofre, GPS, WiFi do telescópio só no app, busca na rede,
     avisos com a tela apagada);

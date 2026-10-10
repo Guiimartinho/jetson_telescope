@@ -82,7 +82,11 @@ não foi tocada, e nenhum celular de verdade foi usado ainda.** O APK (0.3.0) co
   ganhou a seção "Estado atual"; `TASKS.md` ganhou o Milestone G (app e API); o inventário do app
   (`app/docs/01-funcionalidades.md`) diz, função por função, o que ficou feito, o que é simulado
   e o que não foi feito; `docs/33` explica que o console virou a reserva do app.
-- **Testes:** 577 da Jetson, 143 do app, e 9 dos dois lados juntos
+- **O que o CI no Linux mostrou, e o PC não:** a ficha de um alvo dizia "tem miniatura" só na
+  máquina de quem já tinha a imagem do céu baixada em `data/` (fora do git); num clone novo a
+  resposta saía diferente da gravada para os testes do app. As respostas gravadas passaram a ter
+  um mundo fixo, um teste finge o clone novo, e a conferência agora mostra as linhas que diferem.
+- **Testes:** 578 da Jetson, 143 do app, e 9 dos dois lados juntos
   (`scripts/run_app_integration.py`, agora com rede, atualização, polar e planetária).
 - **Não validado em aparelho:** entrar no WiFi do telescópio pelo app, a busca na rede, os
   avisos e o serviço em primeiro plano. Estão escritos conforme a documentação do Android e dos

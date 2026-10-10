@@ -22,7 +22,7 @@ mecânica para o primeiro céu de verdade. O plano original é de 2026-07 (seç�
 | **Console web** (`run_console.py`) | Live / Atlas / Pro, catálogo real de ~14 mil objetos, pronto para o campo sem internet (`docs/33`, `docs/34`). Com a API ligada ele vira só leitura |
 | **API do app** (`src/api`) | HTTPS e WSS com TLS 1.3, pareamento por QR, papéis, e todas as rotas que o app usa. Testada no PC (`app/docs/04-api.md`) |
 | **App do celular** (`app/`) | Flutter, Android primeiro: 43 telas, modo demonstração, APK compila. **Nunca rodou num celular** (`app/README.md`) |
-| **Testes** | 577 em Python (rodam no CI do GitHub, sem GPU nem hardware), 143 do app, e 9 do app contra o servidor de verdade |
+| **Testes** | 578 em Python (rodam no CI do GitHub, sem GPU nem hardware), 143 do app, e 9 do app contra o servidor de verdade. Os do app ainda não rodam no CI |
 
 **O que é de verdade e o que é simulado.** São de verdade: o processamento de imagem, o catálogo,
 o estúdio, a segurança da API e o link com a placa da montagem. São simulados, e as telas dizem
