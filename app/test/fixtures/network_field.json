@@ -1,0 +1,17 @@
+{
+ "address": "192.168.4.1",
+ "enabled": true,
+ "hostname": "telescopio",
+ "hotspot": {
+  "active": true,
+  "address": "10.42.0.1",
+  "psk": "ceu-estrelado",
+  "ssid": "Telescopio-6465"
+ },
+ "known": [],
+ "last_error": null,
+ "mode": "field",
+ "port": 8443,
+ "switching": false,
+ "wifi": null
+}

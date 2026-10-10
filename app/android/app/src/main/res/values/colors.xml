@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- O fundo do produto (o mesmo `bg` do tema do app e do ui_kit). -->
+    <color name="app_bg">#04060C</color>
+</resources>

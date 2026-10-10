@@ -1,0 +1,124 @@
+{
+ "backend": "CuPy/GPU (Orin)",
+ "camera": {
+  "applied": false,
+  "connected": true,
+  "exposure_s": 30.0,
+  "gain": 120,
+  "model": "simulador de céu",
+  "offset": 10,
+  "source": "sim",
+  "temp_c": null
+ },
+ "capture": null,
+ "filter": "",
+ "focus": {
+  "best": 6290,
+  "curve": [
+   {
+    "fwhm_px": 8.4,
+    "pos": 4200
+   },
+   {
+    "fwhm_px": 5.1,
+    "pos": 5250
+   },
+   {
+    "fwhm_px": 2.5,
+    "pos": 6300
+   },
+   {
+    "fwhm_px": 5.3,
+    "pos": 7350
+   },
+   {
+    "fwhm_px": null,
+    "pos": 8400
+   }
+  ],
+  "max": 10000,
+  "min": 0,
+  "position": 6290,
+  "source": "sim"
+ },
+ "focus_pos": 6290,
+ "job": {
+  "error": null,
+  "job": "j-0000-2",
+  "kind": "plan",
+  "state": "running",
+  "steps": [
+   {
+    "name": "stack",
+    "state": "running"
+   }
+  ],
+  "target": null
+ },
+ "mount": {
+  "connected": false,
+  "dec_deg": null,
+  "error": null,
+  "features": [
+   "jog",
+   "park",
+   "tracking",
+   "home",
+   "polar"
+  ],
+  "moving": null,
+  "parked": false,
+  "ra_deg": null,
+  "source": "sim",
+  "tracking": true
+ },
+ "night": [
+  {
+   "accepted": 40,
+   "id": "p-1",
+   "reason": "",
+   "snr": 6.1,
+   "status": "done",
+   "target": "NGC253"
+  },
+  {
+   "accepted": 7,
+   "id": "p-2",
+   "reason": "",
+   "snr": 4.2,
+   "status": "running",
+   "target": "M42"
+  },
+  {
+   "accepted": 0,
+   "id": "p-3",
+   "reason": "",
+   "snr": 0.0,
+   "status": "pending",
+   "target": "NGC188"
+  }
+ ],
+ "phase": "empilhando",
+ "pointing": {
+  "error": 0.0,
+  "unit": "px"
+ },
+ "polar": null,
+ "queue": {
+  "done": 1,
+  "total": 3
+ },
+ "stack": {
+  "accepted": 7,
+  "fwhm_px": 2.6,
+  "integration_s": null,
+  "rejected": 1,
+  "snr": 4.2,
+  "target": "M42"
+ },
+ "state": "STACKING",
+ "system": {
+  "disk_free_gb": 200.1,
+  "temp_c": 41.5
+ }
+}

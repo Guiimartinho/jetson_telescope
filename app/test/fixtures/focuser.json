@@ -1,0 +1,29 @@
+{
+ "best": 6290,
+ "curve": [
+  {
+   "fwhm_px": 8.4,
+   "pos": 4200
+  },
+  {
+   "fwhm_px": 5.1,
+   "pos": 5250
+  },
+  {
+   "fwhm_px": 2.5,
+   "pos": 6300
+  },
+  {
+   "fwhm_px": 5.3,
+   "pos": 7350
+  },
+  {
+   "fwhm_px": null,
+   "pos": 8400
+  }
+ ],
+ "max": 10000,
+ "min": 0,
+ "position": 6290,
+ "source": "sim"
+}

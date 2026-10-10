@@ -1,0 +1,11 @@
+{
+ "error": null,
+ "ignored": [
+  "exposure_s"
+ ],
+ "job": "j-0000-1",
+ "kind": "stack",
+ "state": "accepted",
+ "steps": [],
+ "target": null
+}

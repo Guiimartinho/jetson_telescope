@@ -1,0 +1,77 @@
+{
+ "free_s": 20040,
+ "items": [
+  {
+   "alt_end_deg": 79.1,
+   "alt_start_deg": 74.1,
+   "dec_deg": -25.2882,
+   "duration_s": 1320,
+   "end": "2026-10-10T01:52:00Z",
+   "exposure_s": 30.0,
+   "frames": 40,
+   "id": "p-1",
+   "min_alt_deg": 25.0,
+   "mosaic": [
+    1,
+    1
+   ],
+   "name": "Sculptor Filament",
+   "overlap": 0.15,
+   "ra_deg": 11.888,
+   "start": "2026-10-10T01:30:00Z",
+   "status": "ok",
+   "target": "NGC253",
+   "type": "galaxy"
+  },
+  {
+   "alt_end_deg": 30.6,
+   "alt_start_deg": 25.1,
+   "dec_deg": -5.3897,
+   "duration_s": 1440,
+   "end": "2026-10-10T03:31:00Z",
+   "exposure_s": 30.0,
+   "frames": 20,
+   "id": "p-2",
+   "min_alt_deg": 25.0,
+   "mosaic": [
+    1,
+    2
+   ],
+   "name": "Great Orion Nebula",
+   "overlap": 0.15,
+   "ra_deg": 83.8187,
+   "start": "2026-10-10T03:07:00Z",
+   "status": "ok",
+   "target": "M42",
+   "type": "nebula"
+  },
+  {
+   "alt_end_deg": null,
+   "alt_start_deg": null,
+   "dec_deg": 85.2696,
+   "duration_s": 1020,
+   "end": null,
+   "exposure_s": 30.0,
+   "frames": 30,
+   "id": "p-3",
+   "min_alt_deg": 25.0,
+   "mosaic": [
+    1,
+    1
+   ],
+   "name": "NGC188",
+   "overlap": 0.15,
+   "ra_deg": 11.8647,
+   "start": null,
+   "status": "never_up",
+   "target": "NGC188",
+   "type": "cluster"
+  }
+ ],
+ "night": {
+  "end": "2026-10-10T07:50:00Z",
+  "start": "2026-10-10T01:30:00Z"
+ },
+ "running": false,
+ "total_s": 3780
+}

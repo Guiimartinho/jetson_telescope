@@ -1,0 +1,41 @@
+{
+ "api": 1,
+ "capabilities": {
+  "camera": "sim",
+  "filter_wheel": false,
+  "focuser": "sim",
+  "goto": "sim",
+  "gpu": "CuPy/GPU (Orin)",
+  "modes": [
+   "stack",
+   "autofind",
+   "goto",
+   "observe",
+   "realdata",
+   "scheduler",
+   "mosaic",
+   "tracking",
+   "night",
+   "preview",
+   "focus",
+   "plan",
+   "polar",
+   "planetary"
+  ],
+  "mount": "indi"
+ },
+ "clock": {
+  "synced": false,
+  "utc": "2026-10-10T01:30:00Z"
+ },
+ "id": "tele-a504",
+ "name": "Telescópio",
+ "pairing_open": false,
+ "site": {
+  "elev_m": 760.0,
+  "lat": -23.55,
+  "lon": -46.63,
+  "source": "default"
+ },
+ "software": "0.1.0"
+}

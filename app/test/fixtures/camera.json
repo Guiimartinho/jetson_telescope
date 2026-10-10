@@ -1,0 +1,24 @@
+{
+ "applied": false,
+ "connected": true,
+ "exposure_s": 60.0,
+ "gain": 200,
+ "limits": {
+  "exposure_s": [
+   0.001,
+   600.0
+  ],
+  "gain": [
+   0,
+   600
+  ],
+  "offset": [
+   0,
+   255
+  ]
+ },
+ "model": "simulador de céu",
+ "offset": 10,
+ "source": "sim",
+ "temp_c": null
+}

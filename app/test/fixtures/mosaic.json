@@ -1,0 +1,47 @@
+{
+ "cols": 2,
+ "covers_deg": [
+  4.748,
+  2.671
+ ],
+ "covers_object": true,
+ "field_deg": [
+  2.57,
+  1.44
+ ],
+ "name": "Andromeda Galaxy",
+ "object_arcmin": 177.83,
+ "overlap": 0.15,
+ "panels": [
+  {
+   "col": 0,
+   "dec_deg": 41.8827,
+   "name": "R0C0",
+   "ra_deg": 12.136,
+   "row": 0
+  },
+  {
+   "col": 1,
+   "dec_deg": 41.8827,
+   "name": "R0C1",
+   "ra_deg": 9.2336,
+   "row": 0
+  },
+  {
+   "col": 0,
+   "dec_deg": 40.6555,
+   "name": "R1C0",
+   "ra_deg": 12.136,
+   "row": 1
+  },
+  {
+   "col": 1,
+   "dec_deg": 40.6555,
+   "name": "R1C1",
+   "ra_deg": 9.2336,
+   "row": 1
+  }
+ ],
+ "rows": 2,
+ "target": "M31"
+}

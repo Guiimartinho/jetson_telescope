@@ -1,0 +1,13 @@
+{
+ "api": 1,
+ "device_id": "tele-a504",
+ "disk_free_gb": 200.1,
+ "firmware": null,
+ "power": false,
+ "software": "0.1.0",
+ "temp_c": 41.5,
+ "update": {
+  "enabled": false
+ },
+ "uptime_s": 0
+}

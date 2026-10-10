@@ -1,0 +1,22 @@
+{
+ "items": [
+  {
+   "known": false,
+   "secure": true,
+   "signal": 78,
+   "ssid": "Casa"
+  },
+  {
+   "known": false,
+   "secure": false,
+   "signal": 55,
+   "ssid": "Visitantes"
+  },
+  {
+   "known": false,
+   "secure": true,
+   "signal": 41,
+   "ssid": "Vizinho 5G"
+  }
+ ]
+}
